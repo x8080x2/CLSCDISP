@@ -49,7 +49,7 @@ export default function Dashboard() {
 
       <div className="p-6">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <Card className="border border-gray-100">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -65,46 +65,6 @@ export default function Dashboard() {
                 </div>
                 <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
                   <Package className="text-primary text-xl" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border border-gray-100">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Active Users</p>
-                  <p className="text-3xl font-bold text-gray-900 mt-2">
-                    {statsLoading ? "..." : stats?.activeUsers || 0}
-                  </p>
-                  <p className="text-sm text-success mt-1">
-                    <ArrowUp className="inline w-3 h-3 mr-1" />
-                    +8% from last month
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-success/10 rounded-lg flex items-center justify-center">
-                  <Users className="text-success text-xl" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border border-gray-100">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Revenue</p>
-                  <p className="text-3xl font-bold text-gray-900 mt-2">
-                    ${statsLoading ? "..." : stats?.totalRevenue || "0.00"}
-                  </p>
-                  <p className="text-sm text-success mt-1">
-                    <ArrowUp className="inline w-3 h-3 mr-1" />
-                    +15% from last month
-                  </p>
-                </div>
-                <div className="w-12 h-12 bg-warning/10 rounded-lg flex items-center justify-center">
-                  <DollarSign className="text-warning text-xl" />
                 </div>
               </div>
             </CardContent>
