@@ -1,0 +1,106 @@
+# DocuBot Administration System
+
+## Overview
+
+This is a full-stack web application that provides an administrative interface for managing a Telegram delivery bot called "DocuBot". The system includes a React-based admin dashboard for managing orders, users, and transactions, along with a Node.js backend API and Telegram bot integration.
+
+## User Preferences
+
+Preferred communication style: Simple, everyday language.
+
+## System Architecture
+
+### Frontend Architecture
+- **Framework**: React 18 with TypeScript
+- **Build Tool**: Vite for fast development and optimized production builds
+- **UI Framework**: Tailwind CSS for styling with shadcn/ui component library
+- **State Management**: TanStack Query (React Query) for server state management
+- **Routing**: Wouter for lightweight client-side routing
+- **Form Handling**: React Hook Form with Zod validation
+
+### Backend Architecture
+- **Runtime**: Node.js with TypeScript
+- **Framework**: Express.js for REST API endpoints
+- **Database ORM**: Drizzle ORM with PostgreSQL dialect
+- **Database Provider**: Neon Database (serverless PostgreSQL)
+- **Session Management**: Connect-pg-simple for PostgreSQL session storage
+- **Bot Integration**: node-telegram-bot-api for Telegram bot functionality
+
+### Database Design
+- **Users**: Stores Telegram user information, balances, and account status
+- **Orders**: Manages delivery orders with status tracking and pricing
+- **Transactions**: Records all financial transactions (top-ups, payments, refunds)
+- **Enums**: Predefined status types for orders, transactions, and service levels
+
+## Key Components
+
+### Database Schema
+- **Users Table**: User profiles linked to Telegram accounts with balance tracking
+- **Orders Table**: Comprehensive order management with pickup/delivery addresses, service types, and cost calculations
+- **Transactions Table**: Financial transaction history with type classification
+- **Relationships**: Proper foreign key relationships between users, orders, and transactions
+
+### API Endpoints
+- **Stats**: Dashboard metrics (total orders, active users, revenue, pending orders)
+- **Users**: CRUD operations for user management and balance updates
+- **Orders**: Order creation, status updates, and filtering capabilities
+- **Transactions**: Transaction history and financial record management
+
+### Frontend Pages
+- **Dashboard**: Overview with key metrics and recent activity
+- **Orders**: Order management with filtering and status updates
+- **Users**: User administration with balance management
+- **Transactions**: Financial transaction history and reporting
+
+### Telegram Bot Features
+- **User Registration**: Automatic account creation on first interaction
+- **Service Pricing**: Multi-tier delivery service options (standard, express, same-day)
+- **Order Management**: Complete order lifecycle through bot commands
+- **Payment Processing**: Balance management and transaction handling
+
+## Data Flow
+
+1. **User Registration**: Users interact with Telegram bot, accounts created automatically
+2. **Order Creation**: Orders can be created via bot or admin interface
+3. **Status Updates**: Admin can update order status, notifications sent via Telegram
+4. **Financial Transactions**: Balance updates and payments processed through secure API
+5. **Real-time Updates**: React Query ensures fresh data across admin interface
+
+## External Dependencies
+
+### Core Technologies
+- **@neondatabase/serverless**: Serverless PostgreSQL database connection
+- **drizzle-orm**: Type-safe database ORM with PostgreSQL support
+- **node-telegram-bot-api**: Telegram Bot API integration
+- **@tanstack/react-query**: Server state management for React
+
+### UI Components
+- **@radix-ui/***: Accessible, unstyled UI primitives
+- **tailwindcss**: Utility-first CSS framework
+- **lucide-react**: Modern icon library
+- **react-hook-form**: Performant form library with validation
+
+### Development Tools
+- **vite**: Fast build tool and development server
+- **typescript**: Static type checking
+- **tsx**: TypeScript execution for Node.js development
+
+## Deployment Strategy
+
+### Build Process
+- **Frontend**: Vite builds optimized React application to `dist/public`
+- **Backend**: esbuild bundles Express server with external dependencies
+- **Database**: Drizzle migrations handle schema changes
+
+### Environment Configuration
+- **DATABASE_URL**: PostgreSQL connection string (required)
+- **TELEGRAM_BOT_TOKEN**: Telegram bot authentication token
+- **NODE_ENV**: Environment-specific configuration
+
+### Development Workflow
+- **dev**: Development server with hot reloading using tsx
+- **build**: Production build for both frontend and backend
+- **start**: Production server startup
+- **db:push**: Database schema synchronization
+
+The application follows a monorepo structure with shared TypeScript types and schemas, enabling type safety across the entire stack. The modular architecture allows for easy scaling and maintenance of both the admin interface and bot functionality.
