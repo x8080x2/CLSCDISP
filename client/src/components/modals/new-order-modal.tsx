@@ -17,6 +17,7 @@ interface NewOrderModalProps {
 
 interface DeliveryAddress {
   id: string;
+  name: string;
   address: string;
   description: string;
 }
@@ -37,9 +38,9 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
 
   // Multiple delivery addresses
   const [deliveryAddresses, setDeliveryAddresses] = useState<DeliveryAddress[]>([
-    { id: "1", address: "", description: "" },
-    { id: "2", address: "", description: "" },
-    { id: "3", address: "", description: "" }
+    { id: "1", name: "", address: "", description: "" },
+    { id: "2", name: "", address: "", description: "" },
+    { id: "3", name: "", address: "", description: "" }
   ]);
 
   // Get current user to check balance
@@ -92,6 +93,7 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
           for (let i = currentAddressCount; i < docCount; i++) {
             newAddresses.push({
               id: (i + 1).toString(),
+              name: "",
               address: "",
               description: ""
             });
@@ -107,7 +109,7 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
     setFormData(newFormData);
   };
 
-  const updateDeliveryAddress = (id: string, field: "address" | "description", value: string) => {
+  const updateDeliveryAddress = (id: string, field: "name" | "address" | "description", value: string) => {
     setDeliveryAddresses(prev => 
       prev.map(addr => 
         addr.id === id ? { ...addr, [field]: value } : addr
@@ -119,7 +121,7 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
     const newId = (deliveryAddresses.length + 1).toString();
     setDeliveryAddresses(prev => [
       ...prev,
-      { id: newId, address: "", description: "" }
+      { id: newId, name: "", address: "", description: "" }
     ]);
   };
 
@@ -153,11 +155,13 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
     }
 
     // Validate delivery addresses
-    const filledAddresses = deliveryAddresses.filter(addr => addr.address.trim() !== "");
+    const filledAddresses = deliveryAddresses.filter(addr => 
+      addr.name.trim() !== "" && addr.address.trim() !== ""
+    );
     if (filledAddresses.length < 3) {
       toast({
         title: "Error",
-        description: "Please provide at least 3 delivery addresses",
+        description: "Please provide at least 3 delivery addresses with names",
         variant: "destructive",
       });
       return;
@@ -191,7 +195,7 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
         userId: currentUser?.id || 1,
         description: formData.description,
         pickupAddress: formData.pickupAddress,
-        deliveryAddress: filledAddresses.map(addr => `${addr.address} (${addr.description})`).join(" | "),
+        deliveryAddress: filledAddresses.map(addr => `${addr.name} - ${addr.address}${addr.description ? ' (' + addr.description + ')' : ''}`).join(" | "),
         deliveryAddresses: filledAddresses,
         totalCost: formData.totalCost,
         serviceType: formData.serviceType,
@@ -235,9 +239,9 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
         totalCost: "0.00"
       });
       setDeliveryAddresses([
-        { id: "1", address: "", description: "" },
-        { id: "2", address: "", description: "" },
-        { id: "3", address: "", description: "" }
+        { id: "1", name: "", address: "", description: "" },
+        { id: "2", name: "", address: "", description: "" },
+        { id: "3", name: "", address: "", description: "" }
       ]);
 
       onOpenChange(false);
@@ -361,12 +365,20 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
                     )}
                   </div>
                   
+                  <Input
+                    value={address.name}
+                    onChange={(e) => updateDeliveryAddress(address.id, "name", e.target.value)}
+                    placeholder="Recipient name *"
+                    className="font-medium"
+                    required
+                  />
+                  
                   <div className="relative">
                     <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                     <Input
                       value={address.address}
                       onChange={(e) => updateDeliveryAddress(address.id, "address", e.target.value)}
-                      placeholder="Enter delivery address"
+                      placeholder="Enter delivery address *"
                       className="pl-10"
                       required
                     />
@@ -375,7 +387,7 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
                   <Input
                     value={address.description}
                     onChange={(e) => updateDeliveryAddress(address.id, "description", e.target.value)}
-                    placeholder="Description (optional: person name, floor, etc.)"
+                    placeholder="Additional notes (floor, apartment, etc.)"
                     className="text-sm"
                   />
                 </div>
@@ -391,7 +403,7 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600">Delivery Addresses:</span>
-              <span className="text-sm font-medium">{deliveryAddresses.filter(a => a.address.trim()).length}</span>
+              <span className="text-sm font-medium">{deliveryAddresses.filter(a => a.name.trim() && a.address.trim()).length}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600">Total Cost:</span>
