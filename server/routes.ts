@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { cryptoService } from "./crypto-service";
 import { insertOrderSchema, insertTransactionSchema, insertDeliveryAddressSchema } from "@shared/schema";
 import { sendOrderUpdate, sendNewOrderToAdmins, sendOrderFilesToAdmins } from "./telegram-bot";
 import { z } from "zod";
@@ -399,6 +400,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating transaction:", error);
       res.status(500).json({ message: "Failed to create transaction" });
+    }
+  });
+
+  // Crypto endpoints
+  app.get("/api/crypto/rates", async (req, res) => {
+    try {
+      const rates = cryptoService.getRates();
+      res.json(rates);
+    } catch (error) {
+      console.error("Error fetching crypto rates:", error);
+      res.status(500).json({ message: "Failed to fetch crypto rates" });
+    }
+  });
+
+  app.post("/api/crypto/payment", async (req, res) => {
+    try {
+      const { orderId, userId, amountUsd, cryptoSymbol } = req.body;
+      
+      if (!orderId || !userId || !amountUsd || !cryptoSymbol) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const paymentRequest = cryptoService.createPaymentRequest(
+        orderId,
+        userId,
+        amountUsd,
+        cryptoSymbol
+      );
+
+      res.json(paymentRequest);
+    } catch (error) {
+      console.error("Error creating crypto payment:", error);
+      res.status(500).json({ message: "Failed to create crypto payment" });
+    }
+  });
+
+  app.post("/api/crypto/confirm", async (req, res) => {
+    try {
+      const { paymentId, transactionHash } = req.body;
+      
+      // In a real implementation, you would verify the transaction on the blockchain
+      // For now, we'll create a manual confirmation endpoint for admins
+      
+      res.json({ message: "Payment confirmation received" });
+    } catch (error) {
+      console.error("Error confirming crypto payment:", error);
+      res.status(500).json({ message: "Failed to confirm crypto payment" });
     }
   });
 

@@ -301,11 +301,11 @@ bot.on('message', async (msg) => {
 
         const input = msg.text?.trim() || '';
         const lines = input.split('\n');
-        
+
         // Parse name and address from input
         let name = '';
         let address = '';
-        
+
         for (const line of lines) {
           if (line.toLowerCase().startsWith('name:')) {
             name = line.substring(5).trim();
@@ -421,16 +421,15 @@ bot.on('message', async (msg) => {
 
 💳 *Your Balance:* $${user.balance}
 
-Click below to confirm or cancel your order.`;
+Choose your payment method:`;
 
         const confirmButtons = [];
 
         if (parseFloat(user.balance) >= totalCost) {
-          confirmButtons.push([{ text: '✅ CONFIRM ORDER', callback_data: 'confirm_order' }]);
-        } else {
-          confirmationText += `\n\n❌ *Insufficient balance!* You need $${totalCost} but have $${user.balance}. Please contact @admin to top up your balance.`;
+          confirmButtons.push([{ text: '💳 Pay with Balance', callback_data: 'confirm_order' }]);
         }
 
+        confirmButtons.push([{ text: '₿ Pay with Crypto', callback_data: 'crypto_payment' }]);
         confirmButtons.push([{ text: '❌ CANCEL', callback_data: 'cancel_order' }]);
 
         await bot.sendMessage(chatId, confirmationText, { 
@@ -714,6 +713,50 @@ Your order is now pending and will be processed soon!`;
         }
         break;
 
+        case 'crypto_payment':
+          // Implement crypto payment logic here
+          // This will involve showing crypto options, rates, and generating payment addresses
+          const cryptoOptions = {
+              reply_markup: {
+                  inline_keyboard: [
+                      [{ text: '₿ Bitcoin (BTC)', callback_data: 'crypto_btc' }],
+                      [{ text: 'Ξ Ethereum (ETH)', callback_data: 'crypto_eth' }],
+                      [{ text: 'USDT (ERC-20)', callback_data: 'crypto_usdt_erc20' }],
+                      [{ text: 'USDT (TRC-20)', callback_data: 'crypto_usdt_trc20' }],
+                      [{ text: 'Ł Litecoin (LTC)', callback_data: 'crypto_ltc' }],
+                      [{ text: '❌ Cancel', callback_data: 'cancel_order' }]
+                  ]
+              }
+          };
+  
+          await bot.sendMessage(chatId, 'Choose your preferred cryptocurrency:', cryptoOptions);
+          break;
+
+        case 'crypto_btc':
+            // Handle Bitcoin payment
+            await handleCryptoPayment(chatId, telegramId, 'BTC', query);
+            break;
+  
+        case 'crypto_eth':
+            // Handle Ethereum payment
+            await handleCryptoPayment(chatId, telegramId, 'ETH', query);
+            break;
+  
+        case 'crypto_usdt_erc20':
+            // Handle USDT (ERC-20) payment
+            await handleCryptoPayment(chatId, telegramId, 'USDT_ERC20', query);
+            break;
+  
+        case 'crypto_usdt_trc20':
+            // Handle USDT (TRC-20) payment
+            await handleCryptoPayment(chatId, telegramId, 'USDT_TRC20', query);
+            break;
+  
+        case 'crypto_ltc':
+            // Handle Litecoin payment
+            await handleCryptoPayment(chatId, telegramId, 'LTC', query);
+            break;
+  
       case 'cancel_order':
         if (userState?.step === 'confirm_order') {
           await bot.editMessageReplyMarkup({ inline_keyboard: [] }, {
@@ -734,13 +777,83 @@ Your order is now pending and will be processed soon!`;
   }
 });
 
+// Function to handle crypto payments
+async function handleCryptoPayment(chatId: number, telegramId: string, cryptoType: string, query: any) {
+    const userState = userStates.get(telegramId);
+  
+    if (!userState || !userState.totalCost) {
+        await bot.sendMessage(chatId, '❌ Error: Total cost not found. Please start the order again.');
+        return;
+    }
+  
+    try {
+      // Fetch live crypto rate
+      const cryptoRate = await getCryptoRate(cryptoType, 'USD');
+  
+      if (!cryptoRate) {
+          await bot.sendMessage(chatId, `❌ Error fetching ${cryptoType} rate. Please try again later.`);
+          return;
+      }
+  
+      const amountInCrypto = (userState.totalCost / cryptoRate).toFixed(8);
+  
+      // Generate crypto payment address (replace with actual implementation)
+      const paymentAddress = generateCryptoAddress(cryptoType);
+  
+      const paymentInstructions = `
+  Pay ${amountInCrypto} ${cryptoType} to the following address:
+  
+  \`${paymentAddress}\`
+  
+  Once the payment is confirmed, send the transaction ID to @admin for verification.
+  `;
+  
+        await bot.editMessageReplyMarkup({ inline_keyboard: [] }, {
+          chat_id: chatId,
+          message_id: query.message?.message_id
+        });
+
+      await bot.sendMessage(chatId, paymentInstructions, { parse_mode: 'Markdown' });
+  
+    } catch (error) {
+      console.error(`Error handling ${cryptoType} payment:`, error);
+      await bot.sendMessage(chatId, `❌ Error processing ${cryptoType} payment. Please try again later.`);
+    }
+}
+
+// Dummy function to get crypto rate
+async function getCryptoRate(cryptoType: string, fiatType: string): Promise<number | null> {
+    // Replace this with a real API call to a crypto exchange
+    // Example: CoinGecko, CoinMarketCap, etc.
+    // This is a dummy implementation
+    const rates: { [key: string]: number } = {
+        'BTC': 60000,
+        'ETH': 3000,
+        'USDT_ERC20': 1,
+        'USDT_TRC20': 1,
+        'LTC': 200
+    };
+  
+    if (rates[cryptoType]) {
+        return rates[cryptoType];
+    }
+  
+    return null;
+}
+  
+  // Dummy function to generate crypto address
+function generateCryptoAddress(cryptoType: string): string {
+    // Replace this with a real address generation logic
+    return `FAKE_${cryptoType}_ADDRESS_${Date.now()}`;
+}
+
 // Handle document uploads
 bot.on('document', async (msg) => {
   const chatId = msg.chat.id;
   const telegramId = msg.from?.id.toString() || "";
   const userState = userStates.get(telegramId);
 
-  if (!userState || userState.step !== 'delivery_address_files') {
+  if (!userState || userState.step !== 'delivery_address_files'){
     await bot.sendMessage(chatId, '❌ Please start an order with /order first.');
     return;
   }
