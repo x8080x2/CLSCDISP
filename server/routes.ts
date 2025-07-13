@@ -28,6 +28,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/users/current", async (req, res) => {
+    try {
+      // For demo purposes, return the first user or create a default one
+      const users = await storage.getAllUsers();
+      if (users.length > 0) {
+        res.json(users[0]);
+      } else {
+        res.json({ balance: "0.00" });
+      }
+    } catch (error) {
+      console.error("Error fetching current user:", error);
+      res.status(500).json({ message: "Failed to fetch current user" });
+    }
+  });
+
   app.get("/api/users/:id", async (req, res) => {
     try {
       const user = await storage.getUser(parseInt(req.params.id));
