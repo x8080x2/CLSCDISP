@@ -357,6 +357,16 @@ export default function Sidebar() {
   const [showTopUpModal, setShowTopUpModal] = useState(false);
   const [showSendOutModal, setShowSendOutModal] = useState(false);
 
+  const { data: currentUser, isLoading: currentUserLoading } = useQuery({
+    queryKey: ["/api/users/current"],
+  });
+
+  const navigation = [
+    { name: "Dashboard", href: "/", icon: BarChart3 },
+    { name: "Orders", href: "/orders", icon: Package },
+    { name: "Transactions", href: "/transactions", icon: CreditCard },
+  ];
+
   return (
     <aside className="w-64 bg-white shadow-lg">
       <div className="p-6 border-b border-gray-200">
@@ -405,7 +415,7 @@ export default function Sidebar() {
             <Plus className="w-4 h-4 mr-2" />
             Top Up Balance
           </Button>
-          
+
           <Button 
             onClick={() => setShowSendOutModal(true)}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white"
@@ -413,6 +423,15 @@ export default function Sidebar() {
             <Mail className="w-4 h-4 mr-2" />
             Send Out
           </Button>
+        </div>
+
+        <div className="px-4 py-3 border-t border-gray-200">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-700">Balance</span>
+            <span className="text-sm font-bold text-green-600">
+              {currentUserLoading ? "..." : `$${currentUser?.balance || "0.00"}`}
+            </span>
+          </div>
         </div>
       </nav>
       <TopUpModal isOpen={showTopUpModal} onClose={() => setShowTopUpModal(false)} />
