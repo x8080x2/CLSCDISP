@@ -26,18 +26,13 @@ const navigation = [
 ];
 
 function TopUpModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const [selectedUser, setSelectedUser] = useState("");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const { toast } = useToast();
 
-  const { data: users } = useQuery({
-    queryKey: ["/api/users"],
-  });
-
   const topUpMutation = useMutation({
-    mutationFn: async (data: { userId: number; amount: string; description?: string }) => {
-      const response = await fetch(`/api/users/${data.userId}/balance`, {
+    mutationFn: async (data: { amount: string; description?: string }) => {
+      const response = await fetch(`/api/balance/topup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -52,13 +47,11 @@ function TopUpModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
       toast({
         title: "Success",
-        description: "User balance updated successfully",
+        description: "Balance updated successfully",
       });
-      setSelectedUser("");
       setAmount("");
       setDescription("");
       onClose();
@@ -74,49 +67,22 @@ function TopUpModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedUser || !amount) return;
+    if (!amount) return;
 
     topUpMutation.mutate({
-      userId: parseInt(selectedUser),
       amount,
       description,
     });
   };
 
-  const selectedUserData = users?.find((user: any) => user.id.toString() === selectedUser);
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Top Up User Balance</DialogTitle>
+          <DialogTitle>Top Up Balance</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="user">Select User</Label>
-            <Select value={selectedUser} onValueChange={setSelectedUser}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choose a user..." />
-              </SelectTrigger>
-              <SelectContent>
-                {users?.map((user: any) => (
-                  <SelectItem key={user.id} value={user.id.toString()}>
-                    @{user.username} (Balance: ${user.balance})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {selectedUserData && (
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <p className="text-sm text-gray-600">
-                Current Balance: <span className="font-medium text-gray-900">${selectedUserData.balance}</span>
-              </p>
-            </div>
-          )}
-
           <div className="space-y-2">
             <Label htmlFor="amount">Amount ($)</Label>
             <Input
@@ -148,7 +114,7 @@ function TopUpModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
             </Button>
             <Button 
               type="submit" 
-              disabled={topUpMutation.isPending || !selectedUser || !amount}
+              disabled={topUpMutation.isPending || !amount}
               className="bg-primary text-white hover:bg-primary/90"
             >
               {topUpMutation.isPending ? "Processing..." : "Top Up Balance"}
@@ -161,7 +127,6 @@ function TopUpModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
 }
 
 function SendOutModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const [selectedUser, setSelectedUser] = useState("");
   const [description, setDescription] = useState("");
   const [pickupAddress, setPickupAddress] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
@@ -169,10 +134,6 @@ function SendOutModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
   const [shippingLabels, setShippingLabels] = useState("");
   const [specialInstructions, setSpecialInstructions] = useState("");
   const { toast } = useToast();
-
-  const { data: users } = useQuery({
-    queryKey: ["/api/users"],
-  });
 
   const sendOutMutation = useMutation({
     mutationFn: async (orderData: any) => {
@@ -189,7 +150,6 @@ function SendOutModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       toast({
         title: "Success",
@@ -208,7 +168,6 @@ function SendOutModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
   });
 
   const resetForm = () => {
-    setSelectedUser("");
     setDescription("");
     setPickupAddress("");
     setDeliveryAddress("");
@@ -219,7 +178,7 @@ function SendOutModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedUser || !description || !pickupAddress || !deliveryAddress || !documentCount) return;
+    if (!description || !pickupAddress || !deliveryAddress || !documentCount) return;
 
     const docCount = parseInt(documentCount) || 0;
     if (docCount < 3) {
@@ -232,7 +191,6 @@ function SendOutModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
     }
 
     sendOutMutation.mutate({
-      userId: parseInt(selectedUser),
       description,
       pickupAddress,
       deliveryAddress,
@@ -242,8 +200,6 @@ function SendOutModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
       specialInstructions,
     });
   };
-
-  const selectedUserData = users?.find((user: any) => user.id.toString() === selectedUser);
 
   // Calculate estimated cost
   const docCount = parseInt(documentCount) || 0;
@@ -261,30 +217,6 @@ function SendOutModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="user">Select User</Label>
-            <Select value={selectedUser} onValueChange={setSelectedUser}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choose a user..." />
-              </SelectTrigger>
-              <SelectContent>
-                {users?.map((user: any) => (
-                  <SelectItem key={user.id} value={user.id.toString()}>
-                    @{user.username} (Balance: ${user.balance})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {selectedUserData && (
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <p className="text-sm text-gray-600">
-                Current Balance: <span className="font-medium text-gray-900">${selectedUserData.balance}</span>
-              </p>
-            </div>
-          )}
-
           <div className="space-y-2">
             <Label htmlFor="description">Document Description *</Label>
             <Textarea
@@ -379,7 +311,7 @@ function SendOutModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
             </Button>
             <Button 
               type="submit" 
-              disabled={sendOutMutation.isPending || !selectedUser || !description || !pickupAddress || !deliveryAddress || !documentCount}
+              disabled={sendOutMutation.isPending || !description || !pickupAddress || !deliveryAddress || !documentCount}
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               {sendOutMutation.isPending ? "Creating Order..." : "Create Sendout"}

@@ -178,26 +178,7 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="user" className="text-sm font-medium text-gray-700">
-                User *
-              </Label>
-              <Select value={formData.userId} onValueChange={(value) => setFormData(prev => ({ ...prev, userId: value }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select user..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {users?.map((user: any) => (
-                    <SelectItem key={user.id} value={user.id.toString()}>
-                      @{user.username} (Balance: ${user.balance})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {selectedUser && parseFloat(selectedUser.balance) < calculateCost() && (
-                <p className="text-sm text-red-600">⚠️ User has insufficient balance for this order</p>
-              )}
-            </div>
+            
 
             <div className="space-y-2">
               <Label htmlFor="serviceType" className="text-sm font-medium text-gray-700">
