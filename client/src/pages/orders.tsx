@@ -1,25 +1,47 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState, useMemo } from "react";
 import Header from "@/components/layout/header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Eye, Edit, Plus, Users } from "lucide-react";
-import NewOrderModal from "@/components/modals/new-order-modal";
+import { Eye, Edit, Search, Filter, Plus } from "lucide-react";
 import StatusUpdateModal from "@/components/modals/status-update-modal";
-import { useState } from "react";
+import NewOrderModal from "@/components/modals/new-order-modal";
 
 export default function Orders() {
-  const [showNewOrderModal, setShowNewOrderModal] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [showNewOrderModal, setShowNewOrderModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const { data: orders, isLoading } = useQuery({
-    queryKey: ["/api/orders", statusFilter],
+  const { data: orders, isLoading, refetch } = useQuery({
+    queryKey: ["/api/orders", selectedStatus],
+    queryFn: async () => {
+      const response = await fetch(`/api/orders?status=${selectedStatus}`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch orders");
+      }
+      return response.json();
+    },
   });
+
+  const filteredOrders = useMemo(() => {
+    if (!orders) return [];
+
+    return orders.filter((order: any) => {
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        order.orderNumber.toLowerCase().includes(searchLower) ||
+        order.description.toLowerCase().includes(searchLower) ||
+        order.user?.username.toLowerCase().includes(searchLower) ||
+        order.pickupAddress.toLowerCase().includes(searchLower) ||
+        order.deliveryAddress.toLowerCase().includes(searchLower)
+      );
+    });
+  }, [orders, searchTerm]);
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -36,29 +58,43 @@ export default function Orders() {
     setShowStatusModal(true);
   };
 
-  const filteredOrders = orders?.filter((order: any) => {
-    if (searchQuery) {
-      return (
-        order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.user?.username.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-    return true;
-  });
-
   return (
     <>
       <Header 
         title="Orders" 
         description="Manage all document delivery orders" 
       />
-      
+
       <div className="p-6">
         <Card className="border border-gray-100">
           <div className="p-6 border-b border-gray-100">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">All Orders</h3>
+              <div className="flex items-center space-x-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  <Input
+                    placeholder="Search orders..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 w-64"
+                  />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Filter className="w-4 h-4 text-gray-500" />
+                  <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Orders</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="in_progress">In Progress</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
               <Button 
                 className="bg-primary text-white hover:bg-primary/90"
                 onClick={() => setShowNewOrderModal(true)}
@@ -68,36 +104,8 @@ export default function Orders() {
               </Button>
             </div>
           </div>
-          
-          <CardContent className="p-6">
-            {/* Filters */}
-            <div className="flex flex-wrap gap-4 mb-6">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Orders</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              <Input
-                type="date"
-                className="w-48"
-              />
-              
-              <Input
-                placeholder="Search orders..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1 min-w-0"
-              />
-            </div>
 
+          <CardContent className="p-6">
             {/* Orders Table */}
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -208,7 +216,7 @@ export default function Orders() {
         open={showNewOrderModal} 
         onOpenChange={setShowNewOrderModal} 
       />
-      
+
       <StatusUpdateModal
         open={showStatusModal}
         onOpenChange={setShowStatusModal}

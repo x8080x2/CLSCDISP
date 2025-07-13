@@ -70,7 +70,7 @@ export default function StatusUpdateModal({ open, onOpenChange, order }: StatusU
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold text-gray-900">Update Order Status</DialogTitle>
         </DialogHeader>
-        
+
         <div className="mb-4">
           <p className="text-sm text-gray-600 mb-2">
             Order: <span className="font-medium text-gray-900">{order.orderNumber}</span>
@@ -79,7 +79,7 @@ export default function StatusUpdateModal({ open, onOpenChange, order }: StatusU
             User: <span className="font-medium text-gray-900">@{order.user?.username}</span>
           </p>
         </div>
-        
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
@@ -105,7 +105,7 @@ export default function StatusUpdateModal({ open, onOpenChange, order }: StatusU
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="notes"
@@ -123,7 +123,7 @@ export default function StatusUpdateModal({ open, onOpenChange, order }: StatusU
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="notifyUser"
@@ -143,7 +143,7 @@ export default function StatusUpdateModal({ open, onOpenChange, order }: StatusU
                 </FormItem>
               )}
             />
-            
+
             <div className="flex items-center justify-end space-x-4 mt-6">
               <Button 
                 type="button" 
