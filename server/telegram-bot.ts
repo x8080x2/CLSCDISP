@@ -4,11 +4,10 @@ import { storage } from './storage';
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || process.env.BOT_TOKEN || "";
 
 if (!BOT_TOKEN) {
-  console.error("TELEGRAM_BOT_TOKEN is required");
-  process.exit(1);
+  console.warn("TELEGRAM_BOT_TOKEN not provided - Telegram bot features will be disabled");
 }
 
-export const bot = new TelegramBot(BOT_TOKEN, { polling: true });
+export const bot = BOT_TOKEN ? new TelegramBot(BOT_TOKEN, { polling: true }) : null;
 
 // Service pricing
 const SERVICE_PRICES = {
@@ -21,6 +20,7 @@ const SERVICE_PRICES = {
 const userStates: Map<string, any> = new Map();
 
 // Command handlers
+if (bot) {
 bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
   const telegramId = msg.from?.id.toString() || "";
@@ -356,8 +356,18 @@ ${foundOrder.notes ? `📝 *Notes:* ${foundOrder.notes}` : ''}
   }
 });
 
+console.log('Telegram bot initialized successfully');
+} else {
+  console.log('Telegram bot disabled - no token provided');
+}
+
 // Function to send order status updates
 export async function sendOrderUpdate(telegramId: string, orderNumber: string, newStatus: string, notes?: string) {
+  if (!bot) {
+    console.log('Telegram bot not available - order update not sent');
+    return;
+  }
+  
   try {
     const statusEmoji = {
       pending: '⏳',
@@ -384,5 +394,3 @@ export async function sendOrderUpdate(telegramId: string, orderNumber: string, n
     console.error('Error sending order update:', error);
   }
 }
-
-console.log('Telegram bot initialized successfully');
