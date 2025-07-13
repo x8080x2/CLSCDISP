@@ -42,6 +42,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
   });
+  // Crypto rates endpoint
+  app.get("/api/crypto/rates", async (req, res) => {
+    try {
+      const rates = cryptoService.getRates();
+      res.json(rates);
+    } catch (error) {
+      console.error("Error fetching crypto rates:", error);
+      res.status(500).json({ message: "Failed to fetch crypto rates" });
+    }
+  });
+
+  // Create payment request endpoint
+  app.post("/api/crypto/payment", async (req, res) => {
+    try {
+      const { amount, cryptoSymbol, userId } = req.body;
+      
+      if (!amount || !cryptoSymbol || !userId) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const orderId = `topup_${Date.now()}`;
+      const paymentRequest = cryptoService.createPaymentRequest(orderId, userId, parseFloat(amount), cryptoSymbol);
+      
+      res.json(paymentRequest);
+    } catch (error) {
+      console.error("Error creating payment request:", error);
+      res.status(500).json({ message: "Failed to create payment request" });
+    }
+  });
+
   // Stats endpoint
   app.get("/api/stats", async (req, res) => {
     try {
@@ -132,8 +162,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Validate minimum deposit amount
       const depositAmount = parseFloat(amount);
-      if (depositAmount < 10) {
-        return res.status(400).json({ message: "Minimum deposit amount is $10" });
+      if (depositAmount < 50) {
+        return res.status(400).json({ message: "Minimum deposit amount is $50" });
       }
       
       const user = await storage.getUser(userId);
@@ -162,12 +192,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Balance top-up endpoint (for sidebar)
   app.post("/api/balance/topup", async (req, res) => {
     try {
-      const { amount, description } = req.body;
+      const { amount, description, cryptoSymbol } = req.body;
       
       // Validate minimum deposit amount
       const depositAmount = parseFloat(amount);
-      if (depositAmount < 10) {
-        return res.status(400).json({ message: "Minimum deposit amount is $10" });
+      if (depositAmount < 50) {
+        return res.status(400).json({ message: "Minimum deposit amount is $50" });
+      }
+      
+      // Validate crypto symbol if provided
+      if (cryptoSymbol && !cryptoService.getRate(cryptoSymbol)) {
+        return res.status(400).json({ message: "Unsupported cryptocurrency" });
       }
       
       // For demo purposes, use the first user or create a default admin user
