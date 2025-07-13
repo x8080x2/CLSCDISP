@@ -54,7 +54,7 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
     if (!documentCount) return "0.00";
     
     const count = parseInt(documentCount) || 0;
-    let baseCost = count * 6.50; // Same Day Send Out rate
+    let baseCost = count * 16.50; // Document sendout rate
     
     // Add label courier cost - $11 per delivery address
     if (labelCourier) {
