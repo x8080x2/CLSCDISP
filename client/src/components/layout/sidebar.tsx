@@ -133,7 +133,12 @@ function SendOutModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
   const [documentCount, setDocumentCount] = useState("");
   const [shippingLabels, setShippingLabels] = useState("");
   const [specialInstructions, setSpecialInstructions] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState<string>("");
   const { toast } = useToast();
+
+  const { data: users } = useQuery({
+    queryKey: ["/api/users"],
+  });
 
   const sendOutMutation = useMutation({
     mutationFn: async (orderData: any) => {
@@ -174,11 +179,12 @@ function SendOutModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
     setDocumentCount("");
     setShippingLabels("");
     setSpecialInstructions("");
+    setSelectedUserId("");
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!description || !pickupAddress || !deliveryAddress || !documentCount) return;
+    if (!description || !pickupAddress || !deliveryAddress || !documentCount || !selectedUserId) return;
 
     const docCount = parseInt(documentCount) || 0;
     if (docCount < 3) {
@@ -191,13 +197,15 @@ function SendOutModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
     }
 
     sendOutMutation.mutate({
+      userId: parseInt(selectedUserId),
       description,
       pickupAddress,
       deliveryAddress,
-      serviceType: "document",
-      documentCount,
-      shippingLabels: shippingLabels || "0",
+      serviceType: "standard",
       specialInstructions,
+      baseCost: baseCost.toString(),
+      distanceFee: distanceFee.toString(),
+      totalCost: totalCost.toString(),
     });
   };
 
@@ -217,6 +225,22 @@ function SendOutModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="userId">Select User *</Label>
+            <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choose a user..." />
+              </SelectTrigger>
+              <SelectContent>
+                {users?.map((user: any) => (
+                  <SelectItem key={user.id} value={user.id.toString()}>
+                    @{user.username} (Balance: ${user.balance})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="description">Document Description *</Label>
             <Textarea
@@ -311,7 +335,7 @@ function SendOutModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
             </Button>
             <Button 
               type="submit" 
-              disabled={sendOutMutation.isPending || !description || !pickupAddress || !deliveryAddress || !documentCount}
+              disabled={sendOutMutation.isPending || !description || !pickupAddress || !deliveryAddress || !documentCount || !selectedUserId}
               className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               {sendOutMutation.isPending ? "Creating Order..." : "Create Sendout"}

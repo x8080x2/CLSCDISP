@@ -84,6 +84,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Balance top-up endpoint (for sidebar)
+  app.post("/api/balance/topup", async (req, res) => {
+    try {
+      const { amount, description } = req.body;
+      
+      // For demo purposes, use the first user or create a default admin user
+      let users = await storage.getAllUsers();
+      let user;
+      
+      if (users.length === 0) {
+        // Create admin user if none exists
+        user = await storage.createUser({
+          telegramId: "admin",
+          username: "admin",
+          firstName: "Admin",
+          balance: "0.00",
+        });
+      } else {
+        user = users[0];
+      }
+
+      const newBalance = (parseFloat(user.balance) + parseFloat(amount)).toFixed(2);
+      const updatedUser = await storage.updateUserBalance(user.id, newBalance);
+
+      // Create transaction record
+      await storage.createTransaction({
+        userId: user.id,
+        type: 'top_up',
+        amount: amount.toString(),
+        description: description || `Balance top-up of $${amount}`,
+      });
+
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating balance:", error);
+      res.status(500).json({ message: "Failed to update balance" });
+    }
+  });
+
   // Orders endpoints
   app.get("/api/orders", async (req, res) => {
     try {
