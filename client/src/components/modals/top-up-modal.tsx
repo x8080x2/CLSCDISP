@@ -12,9 +12,10 @@ import { Plus } from "lucide-react";
 interface TopUpModalProps {
   isOpen: boolean;
   onClose: () => void;
+  userId?: number;
 }
 
-export default function TopUpModal({ isOpen, onClose }: TopUpModalProps) {
+export default function TopUpModal({ isOpen, onClose, userId }: TopUpModalProps) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [amount, setAmount] = useState("");
@@ -36,7 +37,8 @@ export default function TopUpModal({ isOpen, onClose }: TopUpModalProps) {
     setLoading(true);
     
     try {
-      const response = await fetch("/api/balance/topup", {
+      const endpoint = userId ? `/api/users/${userId}/balance` : "/api/balance/topup";
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

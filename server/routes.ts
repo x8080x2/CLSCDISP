@@ -43,6 +43,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Customer-specific endpoints
+  app.get("/api/orders/my", async (req, res) => {
+    try {
+      // For demo purposes, get orders for the first user
+      const users = await storage.getAllUsers();
+      if (users.length > 0) {
+        const userOrders = await storage.getUserOrders(users[0].id);
+        res.json(userOrders);
+      } else {
+        res.json([]);
+      }
+    } catch (error) {
+      console.error("Error fetching user orders:", error);
+      res.status(500).json({ message: "Failed to fetch user orders" });
+    }
+  });
+
+  app.get("/api/transactions/my", async (req, res) => {
+    try {
+      // For demo purposes, get transactions for the first user
+      const users = await storage.getAllUsers();
+      if (users.length > 0) {
+        const userTransactions = await storage.getUserTransactions(users[0].id);
+        res.json(userTransactions);
+      } else {
+        res.json([]);
+      }
+    } catch (error) {
+      console.error("Error fetching user transactions:", error);
+      res.status(500).json({ message: "Failed to fetch user transactions" });
+    }
+  });
+
   app.get("/api/users/:id", async (req, res) => {
     try {
       const user = await storage.getUser(parseInt(req.params.id));

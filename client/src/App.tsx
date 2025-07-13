@@ -2,11 +2,17 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Router, Route, Switch } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import Sidebar from "./components/layout/sidebar";
-import Dashboard from "./pages/dashboard";
-import Orders from "./pages/orders";
-import Transactions from "./pages/transactions";
-import Users from "./pages/users";
+
+// Customer Interface
+import CustomerDashboard from "./pages/customer-dashboard";
+
+// Admin Interface
+import AdminSidebar from "./components/layout/admin-sidebar";
+import AdminDashboard from "./pages/admin-dashboard";
+import AdminOrders from "./pages/admin-orders";
+import AdminUsers from "./pages/admin-users";
+import AdminTransactions from "./pages/admin-transactions";
+
 import NotFound from "./pages/not-found";
 import { queryClient } from "./lib/queryClient";
 
@@ -15,18 +21,49 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Router>
-          <div className="flex h-screen bg-gray-50">
-            <Sidebar />
-            <main className="flex-1 overflow-y-auto">
-              <Switch>
-                <Route path="/" component={Dashboard} />
-                <Route path="/orders" component={Orders} />
-                <Route path="/transactions" component={Transactions} />
-                <Route path="/users" component={Users} />
-                <Route component={NotFound} />
-              </Switch>
-            </main>
-          </div>
+          <Switch>
+            {/* Customer Routes */}
+            <Route path="/" component={CustomerDashboard} />
+            
+            {/* Admin Routes */}
+            <Route path="/admin">
+              <div className="flex h-screen bg-gray-50">
+                <AdminSidebar />
+                <main className="flex-1 overflow-y-auto">
+                  <AdminDashboard />
+                </main>
+              </div>
+            </Route>
+            
+            <Route path="/admin/orders">
+              <div className="flex h-screen bg-gray-50">
+                <AdminSidebar />
+                <main className="flex-1 overflow-y-auto">
+                  <AdminOrders />
+                </main>
+              </div>
+            </Route>
+            
+            <Route path="/admin/users">
+              <div className="flex h-screen bg-gray-50">
+                <AdminSidebar />
+                <main className="flex-1 overflow-y-auto">
+                  <AdminUsers />
+                </main>
+              </div>
+            </Route>
+            
+            <Route path="/admin/transactions">
+              <div className="flex h-screen bg-gray-50">
+                <AdminSidebar />
+                <main className="flex-1 overflow-y-auto">
+                  <AdminTransactions />
+                </main>
+              </div>
+            </Route>
+            
+            <Route component={NotFound} />
+          </Switch>
           <Toaster />
         </Router>
       </TooltipProvider>

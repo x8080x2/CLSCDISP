@@ -8,6 +8,15 @@ This is a full-stack web application that provides an administrative interface f
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+### July 13, 2025 - Separated Customer and Admin Interfaces
+- **Customer Interface**: Created `/` route with customer-focused dashboard
+- **Admin Interface**: Created `/admin/*` routes with admin-specific navigation and styling
+- **Visual Distinction**: Admin portal uses red branding with Shield icons, customer uses blue branding with Send icons
+- **Separate Components**: Admin sidebar, header, and pages are completely separate from customer interface
+- **Security**: Admin portal clearly labeled and visually distinct to prevent customer access
+
 ## System Architecture
 
 ### Frontend Architecture
@@ -47,10 +56,19 @@ Preferred communication style: Simple, everyday language.
 - **Transactions**: Transaction history and financial record management
 
 ### Frontend Pages
-- **Dashboard**: Overview with key metrics and recent activity
-- **Orders**: Order management with filtering and status updates
-- **Users**: User administration with balance management
+
+#### Customer Interface (/)
+- **Customer Dashboard**: User-friendly view with personal orders, balance, and transaction history
+- **Order Creation**: Simple interface for customers to create new orders
+- **Balance Management**: Customer can top up their balance
+- **Order Tracking**: View order status and history
+
+#### Admin Interface (/admin/*)
+- **Admin Dashboard**: Administrative overview with system metrics and recent activity
+- **Orders Management**: Full order management with filtering and status updates
+- **Users Management**: User administration with balance management
 - **Transactions**: Financial transaction history and reporting
+- **Visual Distinction**: Red branding with Shield icons to clearly indicate admin access
 
 ### Telegram Bot Features
 - **User Registration**: Automatic account creation on first interaction
