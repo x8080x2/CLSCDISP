@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Package, MapPin, FileText, DollarSign, Plus, X, AlertTriangle } from "lucide-react";
+import FileUpload from "@/components/ui/file-upload";
 
 interface NewOrderModalProps {
   open: boolean;
@@ -20,6 +21,7 @@ interface DeliveryAddress {
   name: string;
   address: string;
   description: string;
+  attachedFiles?: string[];
 }
 
 export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps) {
@@ -39,9 +41,9 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
 
   // Multiple delivery addresses
   const [deliveryAddresses, setDeliveryAddresses] = useState<DeliveryAddress[]>([
-    { id: "1", name: "", address: "", description: "" },
-    { id: "2", name: "", address: "", description: "" },
-    { id: "3", name: "", address: "", description: "" }
+    { id: "1", name: "", address: "", description: "", attachedFiles: [] },
+    { id: "2", name: "", address: "", description: "", attachedFiles: [] },
+    { id: "3", name: "", address: "", description: "", attachedFiles: [] }
   ]);
 
   // Get current user to check balance
@@ -92,7 +94,8 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
               id: (i + 1).toString(),
               name: "",
               address: "",
-              description: ""
+              description: "",
+              attachedFiles: []
             });
           }
           setDeliveryAddresses(newAddresses);
@@ -114,11 +117,19 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
     );
   };
 
+  const updateDeliveryAddressFiles = (id: string, files: string[]) => {
+    setDeliveryAddresses(prev => 
+      prev.map(addr => 
+        addr.id === id ? { ...addr, attachedFiles: files } : addr
+      )
+    );
+  };
+
   const addDeliveryAddress = () => {
     const newId = (deliveryAddresses.length + 1).toString();
     setDeliveryAddresses(prev => [
       ...prev,
-      { id: newId, name: "", address: "", description: "" }
+      { id: newId, name: "", address: "", description: "", attachedFiles: [] }
     ]);
   };
 
@@ -237,9 +248,9 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
         labelCourier: false
       });
       setDeliveryAddresses([
-        { id: "1", name: "", address: "", description: "" },
-        { id: "2", name: "", address: "", description: "" },
-        { id: "3", name: "", address: "", description: "" }
+        { id: "1", name: "", address: "", description: "", attachedFiles: [] },
+        { id: "2", name: "", address: "", description: "", attachedFiles: [] },
+        { id: "3", name: "", address: "", description: "", attachedFiles: [] }
       ]);
 
       onOpenChange(false);
@@ -394,6 +405,14 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
                     onChange={(e) => updateDeliveryAddress(address.id, "description", e.target.value)}
                     placeholder="Additional notes (floor, apartment, etc.)"
                     className="text-sm"
+                  />
+                  
+                  <FileUpload
+                    label={`Files for ${address.name || `Address ${address.id}`}`}
+                    onFilesUploaded={(files) => updateDeliveryAddressFiles(address.id, files)}
+                    existingFiles={address.attachedFiles || []}
+                    maxFiles={5}
+                    disabled={loading}
                   />
                 </div>
               ))}

@@ -36,6 +36,16 @@ export const orders = pgTable("orders", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+export const deliveryAddresses = pgTable("delivery_addresses", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id").notNull().references(() => orders.id),
+  name: text("name").notNull(),
+  address: text("address").notNull(),
+  description: text("description"),
+  attachedFiles: text("attached_files").array(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const transactions = pgTable("transactions", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
@@ -57,6 +67,14 @@ export const ordersRelations = relations(orders, ({ one, many }) => ({
     references: [users.id],
   }),
   transactions: many(transactions),
+  deliveryAddresses: many(deliveryAddresses),
+}));
+
+export const deliveryAddressesRelations = relations(deliveryAddresses, ({ one }) => ({
+  order: one(orders, {
+    fields: [deliveryAddresses.orderId],
+    references: [orders.id],
+  }),
 }));
 
 export const transactionsRelations = relations(transactions, ({ one }) => ({
@@ -89,12 +107,20 @@ export const insertTransactionSchema = createInsertSchema(transactions).omit({
   createdAt: true,
 });
 
+export const insertDeliveryAddressSchema = createInsertSchema(deliveryAddresses).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
 export type Order = typeof orders.$inferSelect;
 export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
 export type Transaction = typeof transactions.$inferSelect;
+export type InsertDeliveryAddress = z.infer<typeof insertDeliveryAddressSchema>;
+export type DeliveryAddress = typeof deliveryAddresses.$inferSelect;
 
 export type OrderWithUser = Order & { user: User };
+export type OrderWithDetails = Order & { user: User; deliveryAddresses: DeliveryAddress[] };
 export type TransactionWithDetails = Transaction & { user: User; order?: Order };

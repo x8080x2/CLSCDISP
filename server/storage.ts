@@ -1,4 +1,4 @@
-import { users, orders, transactions, type User, type InsertUser, type Order, type InsertOrder, type Transaction, type InsertTransaction, type OrderWithUser, type TransactionWithDetails } from "@shared/schema";
+import { users, orders, transactions, deliveryAddresses, type User, type InsertUser, type Order, type InsertOrder, type Transaction, type InsertTransaction, type OrderWithUser, type TransactionWithDetails, type DeliveryAddress, type InsertDeliveryAddress, type OrderWithDetails } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, like, sql, inArray } from "drizzle-orm";
 
@@ -19,6 +19,12 @@ export interface IStorage {
   getUserOrders(userId: number): Promise<OrderWithUser[]>;
   getAllOrders(): Promise<OrderWithUser[]>;
   getOrdersByStatus(status: string): Promise<OrderWithUser[]>;
+  getOrderWithDetails(id: number): Promise<OrderWithDetails | undefined>;
+
+  // Delivery Addresses
+  createDeliveryAddress(address: InsertDeliveryAddress): Promise<DeliveryAddress>;
+  getDeliveryAddresses(orderId: number): Promise<DeliveryAddress[]>;
+  updateDeliveryAddressFiles(id: number, files: string[]): Promise<DeliveryAddress>;
 
   // Transactions
   createTransaction(transaction: InsertTransaction): Promise<Transaction>;
@@ -177,6 +183,51 @@ export class DatabaseStorage implements IStorage {
         ...row.orders,
         user: row.users!,
       }));
+  }
+
+  async getOrderWithDetails(id: number): Promise<OrderWithDetails | undefined> {
+    const orderResult = await db
+      .select()
+      .from(orders)
+      .leftJoin(users, eq(orders.userId, users.id))
+      .where(eq(orders.id, id));
+
+    if (orderResult.length === 0 || !orderResult[0].users) return undefined;
+
+    const deliveryAddressesResult = await db
+      .select()
+      .from(deliveryAddresses)
+      .where(eq(deliveryAddresses.orderId, id));
+
+    return {
+      ...orderResult[0].orders,
+      user: orderResult[0].users!,
+      deliveryAddresses: deliveryAddressesResult,
+    };
+  }
+
+  async createDeliveryAddress(address: InsertDeliveryAddress): Promise<DeliveryAddress> {
+    const [deliveryAddress] = await db
+      .insert(deliveryAddresses)
+      .values(address)
+      .returning();
+    return deliveryAddress;
+  }
+
+  async getDeliveryAddresses(orderId: number): Promise<DeliveryAddress[]> {
+    return await db
+      .select()
+      .from(deliveryAddresses)
+      .where(eq(deliveryAddresses.orderId, orderId));
+  }
+
+  async updateDeliveryAddressFiles(id: number, files: string[]): Promise<DeliveryAddress> {
+    const [deliveryAddress] = await db
+      .update(deliveryAddresses)
+      .set({ attachedFiles: files })
+      .where(eq(deliveryAddresses.id, id))
+      .returning();
+    return deliveryAddress;
   }
 
   async createTransaction(insertTransaction: InsertTransaction): Promise<Transaction> {

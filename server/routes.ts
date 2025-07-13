@@ -1,11 +1,46 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertOrderSchema, insertTransactionSchema } from "@shared/schema";
+import { insertOrderSchema, insertTransactionSchema, insertDeliveryAddressSchema } from "@shared/schema";
 import { sendOrderUpdate } from "./telegram-bot";
 import { z } from "zod";
+import multer from "multer";
+import path from "path";
+import { mkdir } from "fs/promises";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Create uploads directory if it doesn't exist
+  try {
+    await mkdir("uploads", { recursive: true });
+  } catch (error) {
+    console.log("Uploads directory already exists or could not be created");
+  }
+
+  // Set up multer for file uploads
+  const storage_multer = multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, "uploads/");
+    },
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+      cb(null, uniqueSuffix + path.extname(file.originalname));
+    },
+  });
+
+  const upload = multer({ 
+    storage: storage_multer,
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+    fileFilter: (req, file, cb) => {
+      // Allow common document types
+      const allowedTypes = ['.pdf', '.doc', '.docx', '.txt', '.jpg', '.jpeg', '.png'];
+      const fileExtension = path.extname(file.originalname).toLowerCase();
+      if (allowedTypes.includes(fileExtension)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Invalid file type. Only PDF, DOC, DOCX, TXT, JPG, JPEG, PNG files are allowed.'));
+      }
+    }
+  });
   // Stats endpoint
   app.get("/api/stats", async (req, res) => {
     try {
@@ -156,6 +191,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // File upload endpoint
+  app.post("/api/upload", upload.array('files', 10), async (req, res) => {
+    try {
+      const files = req.files as Express.Multer.File[];
+      if (!files || files.length === 0) {
+        return res.status(400).json({ message: "No files uploaded" });
+      }
+      
+      const fileNames = files.map(file => file.filename);
+      res.json({ files: fileNames });
+    } catch (error) {
+      console.error("Error uploading files:", error);
+      res.status(500).json({ message: "Failed to upload files" });
+    }
+  });
+
   // Orders endpoints
   app.get("/api/orders", async (req, res) => {
     try {
@@ -195,29 +246,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/orders", async (req, res) => {
     try {
-      const orderData = insertOrderSchema.parse(req.body);
+      const { deliveryAddresses, ...orderData } = req.body;
+      const validatedOrderData = insertOrderSchema.parse(orderData);
       
       // Verify user exists
-      const user = await storage.getUser(orderData.userId);
+      const user = await storage.getUser(validatedOrderData.userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Validate order data
-      const { documentCount, shippingLabels, serviceType } = req.body;
-      
-      // Validate document count for document orders
-      if (serviceType === 'document') {
-        const docCount = parseInt(documentCount || '0');
-        if (docCount < 3) {
-          return res.status(400).json({ 
-            message: "Document sendout requires a minimum of 3 documents" 
-          });
-        }
-      }
-
       // Verify balance
-      const totalCost = parseFloat(orderData.totalCost);
+      const totalCost = parseFloat(validatedOrderData.totalCost);
       if (parseFloat(user.balance) < totalCost) {
         return res.status(400).json({ 
           message: `Insufficient balance. Required: $${totalCost}, Available: $${user.balance}` 
@@ -225,7 +264,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check for existing pending orders (optional business rule)
-      const userOrders = await storage.getUserOrders(orderData.userId);
+      const userOrders = await storage.getUserOrders(validatedOrderData.userId);
       const activeOrders = userOrders.filter(order => ['pending', 'in_progress'].includes(order.status));
       if (activeOrders.length >= 5) {
         return res.status(400).json({ 
@@ -234,11 +273,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Create order
-      const order = await storage.createOrder(orderData);
+      const order = await storage.createOrder(validatedOrderData);
+
+      // Create delivery addresses if provided
+      if (deliveryAddresses && Array.isArray(deliveryAddresses)) {
+        for (const address of deliveryAddresses) {
+          if (address.name && address.address) {
+            await storage.createDeliveryAddress({
+              orderId: order.id,
+              name: address.name,
+              address: address.address,
+              description: address.description || null,
+              attachedFiles: address.attachedFiles || [],
+            });
+          }
+        }
+      }
 
       // Create transaction
       await storage.createTransaction({
-        userId: orderData.userId,
+        userId: validatedOrderData.userId,
         orderId: order.id,
         type: 'order_payment',
         amount: `-${totalCost}`,
@@ -247,7 +301,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Update user balance
       const newBalance = (parseFloat(user.balance) - totalCost).toFixed(2);
-      await storage.updateUserBalance(orderData.userId, newBalance);
+      await storage.updateUserBalance(validatedOrderData.userId, newBalance);
 
       // Send notification to user if Telegram bot is enabled
       if (user.telegramId) {
@@ -264,9 +318,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Get order with user data
-      const orderWithUser = await storage.getOrder(order.id);
-      res.json(orderWithUser);
+      // Get order with details including delivery addresses
+      const orderWithDetails = await storage.getOrderWithDetails(order.id);
+      res.json(orderWithDetails);
     } catch (error) {
       console.error("Error creating order:", error);
       if (error instanceof z.ZodError) {
