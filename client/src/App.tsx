@@ -4,7 +4,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Sidebar from "@/components/layout/sidebar";
-import Header from "@/components/layout/header";
 import Dashboard from "@/pages/dashboard";
 import Orders from "@/pages/orders";
 import Transactions from "@/pages/transactions";
@@ -19,8 +18,7 @@ function App() {
           <div className="flex h-screen bg-gray-50">
             <Sidebar />
             <div className="flex-1 flex flex-col overflow-hidden">
-              <Header />
-              <main className="flex-1 overflow-auto p-6">
+              <main className="flex-1 overflow-auto">
                 <Switch>
                   <Route path="/" component={Dashboard} />
                   <Route path="/orders" component={Orders} />
