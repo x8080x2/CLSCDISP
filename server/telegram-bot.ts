@@ -836,7 +836,7 @@ export async function sendOrderFilesToAdmins(orderDetails: any, deliveryAddresse
             const addressMessage = `📍 *Delivery Address ${i + 1}:*\n` +
               `Name: ${address.name}\n` +
               `Address: ${address.address}\n` +
-              `${address.description ? `Notes: ${address.description` : ''}` +
+              `${address.description ? `Notes: ${address.description}\n` : ''}` +
               `Files: No files attached`;
 
             await bot.sendMessage(adminId, addressMessage, { parse_mode: 'Markdown' });
