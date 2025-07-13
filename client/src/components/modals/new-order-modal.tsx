@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -7,11 +8,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { Package, MapPin, FileText, DollarSign } from "lucide-react";
+import { Package, MapPin, FileText, DollarSign, Plus, X } from "lucide-react";
 
 interface NewOrderModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+}
+
+interface DeliveryAddress {
+  id: string;
+  address: string;
+  description: string;
 }
 
 export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps) {
@@ -25,9 +32,15 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
     documentCount: "",
     description: "",
     pickupAddress: "",
-    deliveryAddress: "",
     totalCost: "0.00"
   });
+
+  // Multiple delivery addresses
+  const [deliveryAddresses, setDeliveryAddresses] = useState<DeliveryAddress[]>([
+    { id: "1", address: "", description: "" },
+    { id: "2", address: "", description: "" },
+    { id: "3", address: "", description: "" }
+  ]);
 
   // Get current user to check balance
   const { data: currentUser } = useQuery({
@@ -67,16 +80,60 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
         field === "serviceType" ? value : formData.serviceType,
         field === "documentCount" ? value : formData.documentCount
       );
+      
+      // Adjust delivery addresses based on document count
+      if (field === "documentCount") {
+        const docCount = parseInt(value) || 0;
+        const currentAddressCount = deliveryAddresses.length;
+        
+        if (docCount > currentAddressCount) {
+          // Add more addresses
+          const newAddresses = [...deliveryAddresses];
+          for (let i = currentAddressCount; i < docCount; i++) {
+            newAddresses.push({
+              id: (i + 1).toString(),
+              address: "",
+              description: ""
+            });
+          }
+          setDeliveryAddresses(newAddresses);
+        } else if (docCount < currentAddressCount && docCount >= 3) {
+          // Remove excess addresses but keep minimum 3
+          setDeliveryAddresses(deliveryAddresses.slice(0, Math.max(docCount, 3)));
+        }
+      }
     }
     
     setFormData(newFormData);
+  };
+
+  const updateDeliveryAddress = (id: string, field: "address" | "description", value: string) => {
+    setDeliveryAddresses(prev => 
+      prev.map(addr => 
+        addr.id === id ? { ...addr, [field]: value } : addr
+      )
+    );
+  };
+
+  const addDeliveryAddress = () => {
+    const newId = (deliveryAddresses.length + 1).toString();
+    setDeliveryAddresses(prev => [
+      ...prev,
+      { id: newId, address: "", description: "" }
+    ]);
+  };
+
+  const removeDeliveryAddress = (id: string) => {
+    if (deliveryAddresses.length > 3) {
+      setDeliveryAddresses(prev => prev.filter(addr => addr.id !== id));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.serviceType || !formData.documentCount || !formData.description || 
-        !formData.pickupAddress || !formData.deliveryAddress) {
+        !formData.pickupAddress) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -90,6 +147,26 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
       toast({
         title: "Error",
         description: "Minimum 3 documents required for delivery",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate delivery addresses
+    const filledAddresses = deliveryAddresses.filter(addr => addr.address.trim() !== "");
+    if (filledAddresses.length < 3) {
+      toast({
+        title: "Error",
+        description: "Please provide at least 3 delivery addresses",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (filledAddresses.length < docCount) {
+      toast({
+        title: "Error",
+        description: `Please provide ${docCount} delivery addresses (one per document)`,
         variant: "destructive",
       });
       return;
@@ -111,10 +188,11 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
 
     try {
       const orderData = {
-        userId: currentUser?.id || 1, // Default to first user for demo
+        userId: currentUser?.id || 1,
         description: formData.description,
         pickupAddress: formData.pickupAddress,
-        deliveryAddress: formData.deliveryAddress,
+        deliveryAddress: filledAddresses.map(addr => `${addr.address} (${addr.description})`).join(" | "),
+        deliveryAddresses: filledAddresses,
         totalCost: formData.totalCost,
         serviceType: formData.serviceType,
         documentCount: formData.documentCount,
@@ -138,7 +216,7 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
 
       toast({
         title: "Order Created",
-        description: `Order ${newOrder.orderNumber} has been created successfully!`,
+        description: `Order ${newOrder.orderNumber} has been created with ${filledAddresses.length} delivery addresses!`,
       });
 
       // Refresh queries
@@ -154,9 +232,13 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
         documentCount: "",
         description: "",
         pickupAddress: "",
-        deliveryAddress: "",
         totalCost: "0.00"
       });
+      setDeliveryAddresses([
+        { id: "1", address: "", description: "" },
+        { id: "2", address: "", description: "" },
+        { id: "3", address: "", description: "" }
+      ]);
 
       onOpenChange(false);
     } catch (error) {
@@ -173,44 +255,47 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <Package className="w-5 h-5 text-blue-600" />
             <span>Create New Order</span>
           </DialogTitle>
           <DialogDescription>
-            Fill in the details for your document delivery order
+            Fill in the details for your document delivery order. Each document needs a separate delivery address.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Service Type */}
-          <div className="space-y-2">
-            <Label htmlFor="serviceType">Service Type *</Label>
-            <Select value={formData.serviceType} onValueChange={(value) => handleInputChange("serviceType", value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select delivery service" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="standard">Standard Delivery ($2.50/doc)</SelectItem>
-                <SelectItem value="express">Express Delivery ($4.00/doc)</SelectItem>
-                <SelectItem value="same_day">Same Day Delivery ($6.50/doc)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-2 gap-4">
+            {/* Service Type */}
+            <div className="space-y-2">
+              <Label htmlFor="serviceType">Service Type *</Label>
+              <Select value={formData.serviceType} onValueChange={(value) => handleInputChange("serviceType", value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select delivery service" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="standard">Standard Delivery ($2.50/doc)</SelectItem>
+                  <SelectItem value="express">Express Delivery ($4.00/doc)</SelectItem>
+                  <SelectItem value="same_day">Same Day Delivery ($6.50/doc)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-          {/* Document Count */}
-          <div className="space-y-2">
-            <Label htmlFor="documentCount">Number of Documents *</Label>
-            <Input
-              id="documentCount"
-              type="number"
-              min="3"
-              value={formData.documentCount}
-              onChange={(e) => handleInputChange("documentCount", e.target.value)}
-              placeholder="Minimum 3 documents"
-            />
+            {/* Document Count */}
+            <div className="space-y-2">
+              <Label htmlFor="documentCount">Number of Documents *</Label>
+              <Input
+                id="documentCount"
+                type="number"
+                min="3"
+                max="20"
+                value={formData.documentCount}
+                onChange={(e) => handleInputChange("documentCount", e.target.value)}
+                placeholder="Minimum 3 documents"
+              />
+            </div>
           </div>
 
           {/* Description */}
@@ -240,23 +325,74 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
             </div>
           </div>
 
-          {/* Delivery Address */}
-          <div className="space-y-2">
-            <Label htmlFor="deliveryAddress">Delivery Address *</Label>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-              <Input
-                id="deliveryAddress"
-                value={formData.deliveryAddress}
-                onChange={(e) => handleInputChange("deliveryAddress", e.target.value)}
-                placeholder="Enter delivery location"
-                className="pl-10"
-              />
+          {/* Delivery Addresses */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label>Delivery Addresses * (one per document)</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addDeliveryAddress}
+                className="text-xs"
+              >
+                <Plus className="w-3 h-3 mr-1" />
+                Add Address
+              </Button>
+            </div>
+            
+            <div className="space-y-3 max-h-60 overflow-y-auto">
+              {deliveryAddresses.map((address, index) => (
+                <div key={address.id} className="p-3 border rounded-lg space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-700">
+                      Address {index + 1}
+                    </span>
+                    {deliveryAddresses.length > 3 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeDeliveryAddress(address.id)}
+                        className="text-red-500 hover:text-red-700 p-1"
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    )}
+                  </div>
+                  
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                    <Input
+                      value={address.address}
+                      onChange={(e) => updateDeliveryAddress(address.id, "address", e.target.value)}
+                      placeholder="Enter delivery address"
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                  
+                  <Input
+                    value={address.description}
+                    onChange={(e) => updateDeliveryAddress(address.id, "description", e.target.value)}
+                    placeholder="Description (optional: person name, floor, etc.)"
+                    className="text-sm"
+                  />
+                </div>
+              ))}
             </div>
           </div>
 
           {/* Cost Summary */}
           <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600">Documents:</span>
+              <span className="text-sm font-medium">{formData.documentCount || 0}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600">Delivery Addresses:</span>
+              <span className="text-sm font-medium">{deliveryAddresses.filter(a => a.address.trim()).length}</span>
+            </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600">Total Cost:</span>
               <span className="text-lg font-bold text-green-600">${formData.totalCost}</span>
