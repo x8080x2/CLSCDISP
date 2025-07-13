@@ -131,7 +131,6 @@ function SendOutModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
   const [pickupAddress, setPickupAddress] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [documentCount, setDocumentCount] = useState("");
-  const [shippingLabels, setShippingLabels] = useState("");
   const [specialInstructions, setSpecialInstructions] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const { toast } = useToast();
@@ -139,6 +138,10 @@ function SendOutModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
   const { data: users } = useQuery({
     queryKey: ["/api/users"],
   });
+
+  // Auto-calculate shipping labels based on document count
+  const docCount = parseInt(documentCount) || 0;
+  const shippingLabels = docCount > 0 ? docCount.toString() : "0";
 
   const sendOutMutation = useMutation({
     mutationFn: async (orderData: any) => {
@@ -177,7 +180,6 @@ function SendOutModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
     setPickupAddress("");
     setDeliveryAddress("");
     setDocumentCount("");
-    setShippingLabels("");
     setSpecialInstructions("");
     setSelectedUserId("");
   };
@@ -210,7 +212,6 @@ function SendOutModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
   };
 
   // Calculate estimated cost
-  const docCount = parseInt(documentCount) || 0;
   const labelCount = parseInt(shippingLabels) || 0;
   const baseCost = docCount * 16;
   const labelCost = labelCount * 11;
@@ -292,15 +293,18 @@ function SendOutModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="shippingLabels">Shipping Labels</Label>
+              <Label htmlFor="shippingLabels">Shipping Labels (Auto-calculated)</Label>
               <Input
                 id="shippingLabels"
                 type="number"
                 min="0"
-                placeholder="0"
                 value={shippingLabels}
-                onChange={(e) => setShippingLabels(e.target.value)}
+                disabled
+                className="bg-gray-50"
               />
+              <p className="text-xs text-gray-500">
+                Automatically set to match document count
+              </p>
             </div>
           </div>
 
