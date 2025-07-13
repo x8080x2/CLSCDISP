@@ -69,7 +69,7 @@ bot.onText(/\/help/, async (msg) => {
 /history - View your order history
 
 📦 *Orders:*
-/order - Place a new delivery order
+/order - Place a new document sendout order
 /status - Check order status
 
 ℹ️ *Information:*
@@ -108,11 +108,7 @@ bot.onText(/\/pricing/, async (msg) => {
   const pricingText = `
 💵 *Service Pricing*
 
-🚚 *Standard Delivery* - $20
-⚡ *Express Delivery* - $35
-🏃 *Same Day Delivery* - $50
-
-📄 *Document Sendout* - $16.50 per document (min 3)
+📄 *Document Sendout* - $16.50 per document (minimum 3)
 🏷️ *Shipping Label* - $11 each
 
 *Additional fees may apply based on distance.*
@@ -139,18 +135,13 @@ bot.onText(/\/order/, async (msg) => {
     
     const serviceOptions = {
       reply_markup: {
-        keyboard: [
-          ['🚚 Standard Delivery - $20'],
-          ['⚡ Express Delivery - $35'],
-          ['🏃 Same Day Delivery - $50'],
-          ['📄 Document Sendout - $16 each']
-        ],
-        one_time_keyboard: true,
-        resize_keyboard: true
+        inline_keyboard: [
+          [{ text: '📄 Document Sendout - $16.50 each', callback_data: 'service_document' }]
+        ]
       }
     };
     
-    await bot.sendMessage(chatId, '🚀 Choose your service type:', serviceOptions);
+    await bot.sendMessage(chatId, '🚀 We offer Document Sendout service:\n\n📄 Document Sendout - $16.50 per document (minimum 3 documents)\n\nClick below to continue:', serviceOptions);
   } catch (error) {
     console.error('Error in /order command:', error);
     await bot.sendMessage(chatId, '❌ Error starting order process. Please try again later.');
@@ -234,37 +225,8 @@ bot.on('message', async (msg) => {
     
     switch (userState.step) {
       case 'service_type':
-        let orderType = '';
-        
-        if (msg.text?.includes('Standard')) {
-          orderType = 'standard';
-          userState.orderType = 'standard';
-          userState.step = 'description';
-          userStates.set(telegramId, userState);
-          await bot.sendMessage(chatId, '📝 Please describe the documents you need delivered:');
-        } else if (msg.text?.includes('Express')) {
-          orderType = 'express';
-          userState.orderType = 'express';
-          userState.step = 'description';
-          userStates.set(telegramId, userState);
-          await bot.sendMessage(chatId, '📝 Please describe the documents you need delivered:');
-        } else if (msg.text?.includes('Same Day')) {
-          orderType = 'same_day';
-          userState.orderType = 'same_day';
-          userState.step = 'description';
-          userStates.set(telegramId, userState);
-          await bot.sendMessage(chatId, '📝 Please describe the documents you need delivered:');
-        } else if (msg.text?.includes('Document Sendout')) {
-          orderType = 'document';
-          userState.orderType = 'document';
-          userState.step = 'document_count';
-          userStates.set(telegramId, userState);
-          await bot.sendMessage(chatId, '📄 How many documents do you need to send? (Minimum 3)');
-        } else {
-          await bot.sendMessage(chatId, '❌ Please select a valid service option.');
-          return;
-        }
-        break;
+        await bot.sendMessage(chatId, '❌ Please use the inline button above to select the service.');
+        return;
         
       case 'document_count':
         const documentCount = parseInt(msg.text || '0');
@@ -330,39 +292,17 @@ bot.on('message', async (msg) => {
         userState.deliveryAddresses[noteIndex].attachedFiles = [];
         userState.step = 'delivery_address_files';
         userStates.set(telegramId, userState);
-        await bot.sendMessage(chatId, `📎 Please send any files for this delivery address, or type 'done' to continue:`, {
+        await bot.sendMessage(chatId, `📎 Please send any files for this delivery address, or click 'Done' to continue:`, {
           reply_markup: {
-            keyboard: [['Done - No files']],
-            one_time_keyboard: true,
-            resize_keyboard: true
+            inline_keyboard: [
+              [{ text: '✅ Done - No files', callback_data: 'files_done' }]
+            ]
           }
         });
         break;
         
       case 'delivery_address_files':
-        if (msg.text?.toLowerCase() === 'done' || msg.text?.includes('Done')) {
-          // Move to next address or continue order
-          const nextIndex = (userState.currentAddressIndex || 0) + 1;
-          
-          if (nextIndex < userState.documentCount) {
-            userState.currentAddressIndex = nextIndex;
-            userState.step = 'delivery_address_name';
-            userStates.set(telegramId, userState);
-            await bot.sendMessage(chatId, `📍 *Delivery Address ${nextIndex + 1} of ${userState.documentCount}*\n\nPlease provide the recipient name:`, { 
-              parse_mode: 'Markdown',
-              reply_markup: { remove_keyboard: true }
-            });
-          } else {
-            // All addresses collected, continue to shipping labels
-            userState.step = 'shipping_labels';
-            userStates.set(telegramId, userState);
-            await bot.sendMessage(chatId, '🏷️ How many shipping labels do you need? (Enter 0 if none needed)', {
-              reply_markup: { remove_keyboard: true }
-            });
-          }
-        } else {
-          await bot.sendMessage(chatId, '📎 Please send files one by one, or type "done" when finished with this address.');
-        }
+        await bot.sendMessage(chatId, '📎 Please send files one by one, or click "Done" button when finished with this address.');
         break;
         
       case 'delivery':
@@ -436,104 +376,28 @@ bot.on('message', async (msg) => {
 
 💳 *Your Balance:* $${user.balance}
 
-Type 'CONFIRM' to place the order or 'CANCEL' to cancel.`;
+Click below to confirm or cancel your order.`;
         
-        if (parseFloat(user.balance) < totalCost) {
+        const confirmButtons = [];
+        
+        if (parseFloat(user.balance) >= totalCost) {
+          confirmButtons.push([{ text: '✅ CONFIRM ORDER', callback_data: 'confirm_order' }]);
+        } else {
           confirmationText += `\n\n❌ *Insufficient balance!* You need $${totalCost} but have $${user.balance}. Please contact @admin to top up your balance.`;
         }
         
+        confirmButtons.push([{ text: '❌ CANCEL', callback_data: 'cancel_order' }]);
+        
         await bot.sendMessage(chatId, confirmationText, { 
           parse_mode: 'Markdown',
-          reply_markup: { remove_keyboard: true }
+          reply_markup: {
+            inline_keyboard: confirmButtons
+          }
         });
         break;
         
       case 'confirm_order':
-        if (msg.text?.toUpperCase() === 'CONFIRM') {
-          if (parseFloat(user.balance) < userState.totalCost) {
-            await bot.sendMessage(chatId, '❌ Insufficient balance. Please contact @admin to top up your balance.');
-            userStates.delete(telegramId);
-            return;
-          }
-          
-          // Create order
-          const deliveryAddressText = userState.orderType === 'document' 
-            ? userState.deliveryAddresses.map((addr: any) => `${addr.name} - ${addr.address}`).join(' | ')
-            : userState.delivery;
-            
-          const order = await storage.createOrder({
-            userId: user.id,
-            description: userState.description,
-            pickupAddress: userState.pickup,
-            deliveryAddress: deliveryAddressText,
-            serviceType: userState.orderType === 'document' ? 'same_day' : userState.orderType,
-            baseCost: userState.baseCost.toString(),
-            distanceFee: userState.distanceFee.toString(),
-            totalCost: userState.totalCost.toString(),
-            specialInstructions: userState.orderType === 'document' 
-              ? `Document sendout: ${userState.documentCount} documents${userState.labelCount > 0 ? `, ${userState.labelCount} shipping labels` : ''}`
-              : userState.labelCount > 0 ? `${userState.labelCount} shipping labels` : undefined,
-          });
-
-          // Create delivery addresses if it's a document order
-          if (userState.orderType === 'document' && userState.deliveryAddresses) {
-            for (const address of userState.deliveryAddresses) {
-              await storage.createDeliveryAddress({
-                orderId: order.id,
-                name: address.name,
-                address: address.address,
-                description: address.description || null,
-                attachedFiles: address.attachedFiles || [],
-              });
-            }
-          }
-          
-          // Create transaction
-          await storage.createTransaction({
-            userId: user.id,
-            orderId: order.id,
-            type: 'order_payment',
-            amount: `-${userState.totalCost}`,
-            description: `Payment for order ${order.orderNumber}`,
-          });
-          
-          // Update user balance
-          const newBalance = (parseFloat(user.balance) - userState.totalCost).toFixed(2);
-          await storage.updateUserBalance(user.id, newBalance);
-          
-          const successText = `
-✅ *Order Placed Successfully!*
-
-📋 *Order:* ${order.orderNumber}
-💰 *Total:* $${order.totalCost}
-💳 *New Balance:* $${newBalance}
-
-Your order is now pending and will be processed soon!
-          `;
-          
-          await bot.sendMessage(chatId, successText, { parse_mode: 'Markdown' });
-          
-          // Send notifications to admins
-          try {
-            const orderWithDetails = await storage.getOrderWithDetails(order.id);
-            await sendNewOrderToAdmins(orderWithDetails);
-            
-            // Send files to admins if there are any
-            if (orderWithDetails.deliveryAddresses && orderWithDetails.deliveryAddresses.length > 0) {
-              await sendOrderFilesToAdmins(orderWithDetails, orderWithDetails.deliveryAddresses);
-            }
-          } catch (notifyError) {
-            console.warn('Failed to send admin notifications:', notifyError);
-          }
-          
-        } else if (msg.text?.toUpperCase() === 'CANCEL') {
-          await bot.sendMessage(chatId, '❌ Order cancelled.');
-        } else {
-          await bot.sendMessage(chatId, "Please type 'CONFIRM' to place the order or 'CANCEL' to cancel.");
-          return;
-        }
-        
-        userStates.delete(telegramId);
+        await bot.sendMessage(chatId, '❌ Please use the inline buttons above to confirm or cancel your order.');
         break;
         
       
@@ -575,6 +439,165 @@ ${foundOrder.notes ? `📝 *Notes:* ${foundOrder.notes}` : ''}
     console.error('Error in message handler:', error);
     await bot.sendMessage(chatId, '❌ Sorry, there was an error processing your request. Please try again.');
     userStates.delete(telegramId);
+  }
+});
+
+// Handle callback queries (inline keyboard presses)
+bot.on('callback_query', async (query) => {
+  const chatId = query.message?.chat.id;
+  const telegramId = query.from.id.toString();
+  const data = query.data;
+  
+  if (!chatId || !data) return;
+  
+  try {
+    const user = await storage.getUserByTelegramId(telegramId);
+    if (!user) {
+      await bot.answerCallbackQuery(query.id, { text: 'Please use /start to register first.' });
+      return;
+    }
+    
+    const userState = userStates.get(telegramId);
+    
+    switch (data) {
+      case 'service_document':
+        if (userState?.step === 'service_type') {
+          userState.orderType = 'document';
+          userState.step = 'document_count';
+          userStates.set(telegramId, userState);
+          
+          await bot.editMessageReplyMarkup({ inline_keyboard: [] }, {
+            chat_id: chatId,
+            message_id: query.message?.message_id
+          });
+          
+          await bot.sendMessage(chatId, '📄 How many documents do you need to send? (Minimum 3)');
+        }
+        break;
+        
+      case 'files_done':
+        if (userState?.step === 'delivery_address_files') {
+          // Move to next address or continue order
+          const nextIndex = (userState.currentAddressIndex || 0) + 1;
+          
+          await bot.editMessageReplyMarkup({ inline_keyboard: [] }, {
+            chat_id: chatId,
+            message_id: query.message?.message_id
+          });
+          
+          if (nextIndex < userState.documentCount) {
+            userState.currentAddressIndex = nextIndex;
+            userState.step = 'delivery_address_name';
+            userStates.set(telegramId, userState);
+            await bot.sendMessage(chatId, `📍 *Delivery Address ${nextIndex + 1} of ${userState.documentCount}*\n\nPlease provide the recipient name:`, { 
+              parse_mode: 'Markdown'
+            });
+          } else {
+            // All addresses collected, continue to shipping labels
+            userState.step = 'shipping_labels';
+            userStates.set(telegramId, userState);
+            await bot.sendMessage(chatId, '🏷️ How many shipping labels do you need? (Enter 0 if none needed)');
+          }
+        }
+        break;
+        
+      case 'confirm_order':
+        if (userState?.step === 'confirm_order') {
+          if (parseFloat(user.balance) < userState.totalCost) {
+            await bot.answerCallbackQuery(query.id, { text: 'Insufficient balance!' });
+            return;
+          }
+          
+          await bot.editMessageReplyMarkup({ inline_keyboard: [] }, {
+            chat_id: chatId,
+            message_id: query.message?.message_id
+          });
+          
+          // Create order
+          const deliveryAddressText = userState.deliveryAddresses.map((addr: any) => `${addr.name} - ${addr.address}`).join(' | ');
+            
+          const order = await storage.createOrder({
+            userId: user.id,
+            description: userState.description,
+            pickupAddress: userState.pickup,
+            deliveryAddress: deliveryAddressText,
+            serviceType: 'same_day',
+            baseCost: userState.baseCost.toString(),
+            distanceFee: userState.distanceFee.toString(),
+            totalCost: userState.totalCost.toString(),
+            specialInstructions: `Document sendout: ${userState.documentCount} documents${userState.labelCount > 0 ? `, ${userState.labelCount} shipping labels` : ''}`,
+          });
+
+          // Create delivery addresses
+          if (userState.deliveryAddresses) {
+            for (const address of userState.deliveryAddresses) {
+              await storage.createDeliveryAddress({
+                orderId: order.id,
+                name: address.name,
+                address: address.address,
+                description: address.description || null,
+                attachedFiles: address.attachedFiles || [],
+              });
+            }
+          }
+          
+          // Create transaction
+          await storage.createTransaction({
+            userId: user.id,
+            orderId: order.id,
+            type: 'order_payment',
+            amount: `-${userState.totalCost}`,
+            description: `Payment for order ${order.orderNumber}`,
+          });
+          
+          // Update user balance
+          const newBalance = (parseFloat(user.balance) - userState.totalCost).toFixed(2);
+          await storage.updateUserBalance(user.id, newBalance);
+          
+          const successText = `✅ *Order Placed Successfully!*
+
+📋 *Order:* ${order.orderNumber}
+💰 *Total:* $${order.totalCost}
+💳 *New Balance:* $${newBalance}
+
+Your order is now pending and will be processed soon!`;
+          
+          await bot.sendMessage(chatId, successText, { parse_mode: 'Markdown' });
+          
+          // Send notifications to admins
+          try {
+            const orderWithDetails = await storage.getOrderWithDetails(order.id);
+            await sendNewOrderToAdmins(orderWithDetails);
+            
+            // Send files to admins if there are any
+            if (orderWithDetails.deliveryAddresses && orderWithDetails.deliveryAddresses.length > 0) {
+              await sendOrderFilesToAdmins(orderWithDetails, orderWithDetails.deliveryAddresses);
+            }
+          } catch (notifyError) {
+            console.warn('Failed to send admin notifications:', notifyError);
+          }
+          
+          userStates.delete(telegramId);
+        }
+        break;
+        
+      case 'cancel_order':
+        if (userState?.step === 'confirm_order') {
+          await bot.editMessageReplyMarkup({ inline_keyboard: [] }, {
+            chat_id: chatId,
+            message_id: query.message?.message_id
+          });
+          
+          await bot.sendMessage(chatId, '❌ Order cancelled.');
+          userStates.delete(telegramId);
+        }
+        break;
+    }
+    
+    await bot.answerCallbackQuery(query.id);
+  } catch (error) {
+    console.error('Error handling callback query:', error);
+    await bot.answerCallbackQuery(query.id, { text: 'Sorry, there was an error.' });
   }
 });
 
