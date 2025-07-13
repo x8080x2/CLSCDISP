@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Package, Clock, CheckCircle, XCircle, Plus, CreditCard, FileText, Send } from "lucide-react";
 import { useState } from "react";
+import { Link } from "wouter";
 import NewOrderModal from "@/components/modals/new-order-modal";
 import TopUpModal from "@/components/modals/top-up-modal";
 
@@ -71,17 +72,29 @@ export default function CustomerDashboard() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <div className="text-right">
-                <p className="text-sm text-gray-600">Welcome back,</p>
-                <p className="font-semibold text-gray-900">
-                  {userLoading ? "Loading..." : currentUser?.firstName || currentUser?.username}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-sm text-gray-600">Balance</p>
-                <p className="font-bold text-green-600">
-                  ${userLoading ? "0.00" : currentUser?.balance || "0.00"}
-                </p>
+              <div className="flex items-center space-x-4">
+                <Link href="/profile">
+                  <Button variant="ghost" size="sm">
+                    Profile
+                  </Button>
+                </Link>
+                <Link href="/orders">
+                  <Button variant="ghost" size="sm">
+                    My Orders
+                  </Button>
+                </Link>
+                <div className="text-right">
+                  <p className="text-sm text-gray-600">Welcome back,</p>
+                  <p className="font-semibold text-gray-900">
+                    {userLoading ? "Loading..." : currentUser?.firstName || currentUser?.username}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-gray-600">Balance</p>
+                  <p className="font-bold text-green-600">
+                    ${userLoading ? "0.00" : currentUser?.balance || "0.00"}
+                  </p>
+                </div>
               </div>
             </div>
           </div>

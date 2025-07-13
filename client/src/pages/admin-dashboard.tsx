@@ -3,15 +3,17 @@ import AdminHeader from "@/components/layout/admin-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowUp, ArrowDown, Package, Users, DollarSign, Clock, FileText, Plus, Eye, Edit, Shield } from "lucide-react";
+import { ArrowUp, ArrowDown, Package, Users, DollarSign, Clock, FileText, Plus, Eye, Edit, Shield, BarChart } from "lucide-react";
 import NewOrderModal from "@/components/modals/new-order-modal";
 import StatusUpdateModal from "@/components/modals/status-update-modal";
+import AnalyticsDashboard from "@/components/charts/analytics-dashboard";
 import { useState } from "react";
 
 export default function AdminDashboard() {
   const [showNewOrderModal, setShowNewOrderModal] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["/api/stats"],
@@ -49,6 +51,30 @@ export default function AdminDashboard() {
 
       <div className="p-6">
         {/* Stats Cards */}
+        {/* Analytics Toggle */}
+        <div className="flex justify-end mb-6">
+          <Button
+            variant="outline"
+            onClick={() => setShowAnalytics(!showAnalytics)}
+            className="flex items-center space-x-2"
+          >
+            <BarChart className="w-4 h-4" />
+            <span>{showAnalytics ? 'Hide Analytics' : 'Show Analytics'}</span>
+          </Button>
+        </div>
+
+        {/* Analytics Dashboard */}
+        {showAnalytics && (
+          <div className="mb-8">
+            <AnalyticsDashboard 
+              stats={stats || {}}
+              orders={recentOrders || []}
+              users={users || []}
+              transactions={[]}
+            />
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card className="border border-gray-100">
             <CardContent className="p-6">

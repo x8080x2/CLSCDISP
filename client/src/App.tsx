@@ -5,6 +5,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 
 // Customer Interface
 import CustomerDashboard from "./pages/customer-dashboard";
+import CustomerOrders from "./pages/customer-orders";
+import CustomerProfile from "./pages/customer-profile";
 
 // Admin Interface
 import AdminSidebar from "./components/layout/admin-sidebar";
@@ -24,6 +26,8 @@ function App() {
           <Switch>
             {/* Customer Routes */}
             <Route path="/" component={CustomerDashboard} />
+            <Route path="/orders" component={CustomerOrders} />
+            <Route path="/profile" component={CustomerProfile} />
             
             {/* Admin Routes */}
             <Route path="/admin">
