@@ -274,9 +274,9 @@ bot.on('message', async (msg) => {
         if (userState.orderType === 'document') {
           userState.deliveryAddresses = [];
           userState.currentAddressIndex = 0;
-          userState.step = 'delivery_address_name';
+          userState.step = 'delivery_address_info';
           userStates.set(telegramId, userState);
-          await bot.sendMessage(chatId, `📍 *Delivery Address 1 of ${userState.documentCount}*\n\nPlease provide the recipient name:`, { 
+          await bot.sendMessage(chatId, `📍 *Delivery Address 1 of ${userState.documentCount}*\n\nPlease provide recipient name and address in this format:\nName: John Doe\nAddress: 123 Main Street, City, State ZIP`, { 
             parse_mode: 'Markdown',
             reply_markup: {
               inline_keyboard: [
@@ -291,7 +291,7 @@ bot.on('message', async (msg) => {
         }
         break;
 
-      case 'delivery_address_name':
+      case 'delivery_address_info':
         if (!userState.deliveryAddresses) userState.deliveryAddresses = [];
         const currentIndex = userState.currentAddressIndex || 0;
 
@@ -299,15 +299,34 @@ bot.on('message', async (msg) => {
           userState.deliveryAddresses[currentIndex] = {};
         }
 
-        userState.deliveryAddresses[currentIndex].name = msg.text;
-        userState.step = 'delivery_address_location';
-        userStates.set(telegramId, userState);
-        await bot.sendMessage(chatId, `📍 Please provide the delivery address for ${msg.text}:`);
-        break;
+        const input = msg.text?.trim() || '';
+        const lines = input.split('\n');
+        
+        // Parse name and address from input
+        let name = '';
+        let address = '';
+        
+        for (const line of lines) {
+          if (line.toLowerCase().startsWith('name:')) {
+            name = line.substring(5).trim();
+          } else if (line.toLowerCase().startsWith('address:')) {
+            address = line.substring(8).trim();
+          }
+        }
 
-      case 'delivery_address_location':
-        const addressIndex = userState.currentAddressIndex || 0;
-        userState.deliveryAddresses[addressIndex].address = msg.text;
+        // If format not followed, try to parse differently
+        if (!name || !address) {
+          if (lines.length >= 2) {
+            name = lines[0].trim();
+            address = lines.slice(1).join(' ').trim();
+          } else {
+            await bot.sendMessage(chatId, `❌ Please provide both name and address in this format:\nName: John Doe\nAddress: 123 Main Street, City, State ZIP`);
+            return;
+          }
+        }
+
+        userState.deliveryAddresses[currentIndex].name = name;
+        userState.deliveryAddresses[currentIndex].address = address;
         userState.step = 'delivery_address_notes';
         userStates.set(telegramId, userState);
         await bot.sendMessage(chatId, `📝 Any special notes for this delivery? (Enter 'none' if no special instructions):`);
@@ -601,9 +620,9 @@ bot.on('callback_query', async (query) => {
 
           if (nextIndex < userState.documentCount) {
             userState.currentAddressIndex = nextIndex;
-            userState.step = 'delivery_address_name';
+            userState.step = 'delivery_address_info';
             userStates.set(telegramId, userState);
-            await bot.sendMessage(chatId, `📍 *Delivery Address ${nextIndex + 1} of ${userState.documentCount}*\n\nPlease provide the recipient name:`, { 
+            await bot.sendMessage(chatId, `📍 *Delivery Address ${nextIndex + 1} of ${userState.documentCount}*\n\nPlease provide recipient name and address in this format:\nName: John Doe\nAddress: 123 Main Street, City, State ZIP`, { 
               parse_mode: 'Markdown'
             });
           } else {
