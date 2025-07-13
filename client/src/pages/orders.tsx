@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Eye, Edit, Search, Filter, Plus } from "lucide-react";
+import { Eye, Edit, Search, Filter, Plus, Users } from "lucide-react";
 import StatusUpdateModal from "@/components/modals/status-update-modal";
 import NewOrderModal from "@/components/modals/new-order-modal";
 
