@@ -276,7 +276,7 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-blue-900">Same Day Send Out</span>
-                  <span className="text-sm text-blue-700">$6.50/doc</span>
+                  <span className="text-sm text-blue-700">$16.50/doc</span>
                 </div>
                 <p className="text-xs text-blue-600 mt-1">Available Mon-Sat, 24 hours</p>
               </div>
