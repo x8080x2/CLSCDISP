@@ -1,5 +1,7 @@
 import TelegramBot from 'node-telegram-bot-api';
 import { storage } from './storage';
+import fs from 'fs';
+import path from 'path';
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || process.env.BOT_TOKEN || "";
 const ADMIN_IDS = (process.env.TELEGRAM_ADMIN_IDS || "").split(",").map(id => id.trim()).filter(id => id);
@@ -285,9 +287,82 @@ bot.on('message', async (msg) => {
         
       case 'pickup':
         userState.pickup = msg.text;
-        userState.step = 'delivery';
+        
+        // Initialize delivery addresses array for document sendout
+        if (userState.orderType === 'document') {
+          userState.deliveryAddresses = [];
+          userState.currentAddressIndex = 0;
+          userState.step = 'delivery_address_name';
+          userStates.set(telegramId, userState);
+          await bot.sendMessage(chatId, `📍 *Delivery Address 1 of ${userState.documentCount}*\n\nPlease provide the recipient name:`, { parse_mode: 'Markdown' });
+        } else {
+          userState.step = 'delivery';
+          userStates.set(telegramId, userState);
+          await bot.sendMessage(chatId, '🎯 Please provide the delivery address:');
+        }
+        break;
+        
+      case 'delivery_address_name':
+        if (!userState.deliveryAddresses) userState.deliveryAddresses = [];
+        const currentIndex = userState.currentAddressIndex || 0;
+        
+        if (!userState.deliveryAddresses[currentIndex]) {
+          userState.deliveryAddresses[currentIndex] = {};
+        }
+        
+        userState.deliveryAddresses[currentIndex].name = msg.text;
+        userState.step = 'delivery_address_location';
         userStates.set(telegramId, userState);
-        await bot.sendMessage(chatId, '🎯 Please provide the delivery address:');
+        await bot.sendMessage(chatId, `📍 Please provide the delivery address for ${msg.text}:`);
+        break;
+        
+      case 'delivery_address_location':
+        const addressIndex = userState.currentAddressIndex || 0;
+        userState.deliveryAddresses[addressIndex].address = msg.text;
+        userState.step = 'delivery_address_notes';
+        userStates.set(telegramId, userState);
+        await bot.sendMessage(chatId, `📝 Any special notes for this delivery? (Enter 'none' if no special instructions):`);
+        break;
+        
+      case 'delivery_address_notes':
+        const noteIndex = userState.currentAddressIndex || 0;
+        userState.deliveryAddresses[noteIndex].description = msg.text === 'none' ? '' : msg.text;
+        userState.deliveryAddresses[noteIndex].attachedFiles = [];
+        userState.step = 'delivery_address_files';
+        userStates.set(telegramId, userState);
+        await bot.sendMessage(chatId, `📎 Please send any files for this delivery address, or type 'done' to continue:`, {
+          reply_markup: {
+            keyboard: [['Done - No files']],
+            one_time_keyboard: true,
+            resize_keyboard: true
+          }
+        });
+        break;
+        
+      case 'delivery_address_files':
+        if (msg.text?.toLowerCase() === 'done' || msg.text?.includes('Done')) {
+          // Move to next address or continue order
+          const nextIndex = (userState.currentAddressIndex || 0) + 1;
+          
+          if (nextIndex < userState.documentCount) {
+            userState.currentAddressIndex = nextIndex;
+            userState.step = 'delivery_address_name';
+            userStates.set(telegramId, userState);
+            await bot.sendMessage(chatId, `📍 *Delivery Address ${nextIndex + 1} of ${userState.documentCount}*\n\nPlease provide the recipient name:`, { 
+              parse_mode: 'Markdown',
+              reply_markup: { remove_keyboard: true }
+            });
+          } else {
+            // All addresses collected, continue to shipping labels
+            userState.step = 'shipping_labels';
+            userStates.set(telegramId, userState);
+            await bot.sendMessage(chatId, '🏷️ How many shipping labels do you need? (Enter 0 if none needed)', {
+              reply_markup: { remove_keyboard: true }
+            });
+          }
+        } else {
+          await bot.sendMessage(chatId, '📎 Please send files one by one, or type "done" when finished with this address.');
+        }
         break;
         
       case 'delivery':
@@ -332,12 +407,23 @@ bot.on('message', async (msg) => {
 
 📝 *Description:* ${userState.description}
 📍 *Pickup:* ${userState.pickup}
-🎯 *Delivery:* ${userState.delivery}
 `;
 
         if (userState.orderType === 'document') {
-          confirmationText += `📄 *Documents:* ${userState.documentCount} × $${SERVICE_PRICES.document.pricePerDocument} = $${baseCost}\n`;
+          confirmationText += `📄 *Documents:* ${userState.documentCount} × $${SERVICE_PRICES.document.pricePerDocument} = $${baseCost}\n\n`;
+          
+          // Add delivery addresses
+          confirmationText += `🎯 *Delivery Addresses:*\n`;
+          userState.deliveryAddresses.forEach((addr: any, index: number) => {
+            confirmationText += `${index + 1}. ${addr.name} - ${addr.address}\n`;
+            if (addr.description) confirmationText += `   Notes: ${addr.description}\n`;
+            if (addr.attachedFiles && addr.attachedFiles.length > 0) {
+              confirmationText += `   Files: ${addr.attachedFiles.length} file(s)\n`;
+            }
+          });
+          confirmationText += `\n`;
         } else {
+          confirmationText += `🎯 *Delivery:* ${userState.delivery}\n`;
           confirmationText += `🚀 *Service:* ${SERVICE_PRICES[serviceType as keyof typeof SERVICE_PRICES].name} - $${baseCost}\n`;
         }
         
@@ -371,12 +457,16 @@ Type 'CONFIRM' to place the order or 'CANCEL' to cancel.`;
           }
           
           // Create order
+          const deliveryAddressText = userState.orderType === 'document' 
+            ? userState.deliveryAddresses.map((addr: any) => `${addr.name} - ${addr.address}`).join(' | ')
+            : userState.delivery;
+            
           const order = await storage.createOrder({
             userId: user.id,
             description: userState.description,
             pickupAddress: userState.pickup,
-            deliveryAddress: userState.delivery,
-            serviceType: userState.orderType === 'document' ? 'standard' : userState.orderType,
+            deliveryAddress: deliveryAddressText,
+            serviceType: userState.orderType === 'document' ? 'same_day' : userState.orderType,
             baseCost: userState.baseCost.toString(),
             distanceFee: userState.distanceFee.toString(),
             totalCost: userState.totalCost.toString(),
@@ -384,6 +474,19 @@ Type 'CONFIRM' to place the order or 'CANCEL' to cancel.`;
               ? `Document sendout: ${userState.documentCount} documents${userState.labelCount > 0 ? `, ${userState.labelCount} shipping labels` : ''}`
               : userState.labelCount > 0 ? `${userState.labelCount} shipping labels` : undefined,
           });
+
+          // Create delivery addresses if it's a document order
+          if (userState.orderType === 'document' && userState.deliveryAddresses) {
+            for (const address of userState.deliveryAddresses) {
+              await storage.createDeliveryAddress({
+                orderId: order.id,
+                name: address.name,
+                address: address.address,
+                description: address.description || null,
+                attachedFiles: address.attachedFiles || [],
+              });
+            }
+          }
           
           // Create transaction
           await storage.createTransaction({
@@ -409,6 +512,19 @@ Your order is now pending and will be processed soon!
           `;
           
           await bot.sendMessage(chatId, successText, { parse_mode: 'Markdown' });
+          
+          // Send notifications to admins
+          try {
+            const orderWithDetails = await storage.getOrderWithDetails(order.id);
+            await sendNewOrderToAdmins(orderWithDetails);
+            
+            // Send files to admins if there are any
+            if (orderWithDetails.deliveryAddresses && orderWithDetails.deliveryAddresses.length > 0) {
+              await sendOrderFilesToAdmins(orderWithDetails, orderWithDetails.deliveryAddresses);
+            }
+          } catch (notifyError) {
+            console.warn('Failed to send admin notifications:', notifyError);
+          }
           
         } else if (msg.text?.toUpperCase() === 'CANCEL') {
           await bot.sendMessage(chatId, '❌ Order cancelled.');
@@ -459,6 +575,123 @@ ${foundOrder.notes ? `📝 *Notes:* ${foundOrder.notes}` : ''}
     console.error('Error in message handler:', error);
     await bot.sendMessage(chatId, '❌ Sorry, there was an error processing your request. Please try again.');
     userStates.delete(telegramId);
+  }
+});
+
+// Handle document uploads
+bot.on('document', async (msg) => {
+  const chatId = msg.chat.id;
+  const telegramId = msg.from?.id.toString() || "";
+  const userState = userStates.get(telegramId);
+  
+  if (!userState || userState.step !== 'delivery_address_files') {
+    await bot.sendMessage(chatId, '❌ Please start an order with /order first.');
+    return;
+  }
+  
+  try {
+    const document = msg.document;
+    if (!document) return;
+    
+    // Check file type
+    const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
+    if (!allowedTypes.includes(document.mime_type || '')) {
+      await bot.sendMessage(chatId, '❌ Only PDF, DOC, DOCX, and TXT files are allowed.');
+      return;
+    }
+    
+    // Check file size (10MB limit)
+    if (document.file_size && document.file_size > 10 * 1024 * 1024) {
+      await bot.sendMessage(chatId, '❌ File size must be less than 10MB.');
+      return;
+    }
+    
+    // Download and save file
+    const fileId = document.file_id;
+    const file = await bot.getFile(fileId);
+    const fileName = `${Date.now()}_${document.file_name}`;
+    const uploadsDir = path.join(process.cwd(), 'uploads');
+    
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+    
+    const filePath = path.join(uploadsDir, fileName);
+    
+    if (file.file_path) {
+      const fileStream = await bot.downloadFile(fileId, uploadsDir);
+      fs.renameSync(path.join(uploadsDir, path.basename(file.file_path)), filePath);
+    }
+    
+    // Add file to current address
+    const currentIndex = userState.currentAddressIndex || 0;
+    if (!userState.deliveryAddresses[currentIndex].attachedFiles) {
+      userState.deliveryAddresses[currentIndex].attachedFiles = [];
+    }
+    
+    userState.deliveryAddresses[currentIndex].attachedFiles.push(fileName);
+    userStates.set(telegramId, userState);
+    
+    await bot.sendMessage(chatId, `✅ File "${document.file_name}" uploaded successfully! Send more files or type "done" to continue.`);
+    
+  } catch (error) {
+    console.error('Error handling document upload:', error);
+    await bot.sendMessage(chatId, '❌ Error uploading file. Please try again.');
+  }
+});
+
+// Handle photo uploads
+bot.on('photo', async (msg) => {
+  const chatId = msg.chat.id;
+  const telegramId = msg.from?.id.toString() || "";
+  const userState = userStates.get(telegramId);
+  
+  if (!userState || userState.step !== 'delivery_address_files') {
+    await bot.sendMessage(chatId, '❌ Please start an order with /order first.');
+    return;
+  }
+  
+  try {
+    const photo = msg.photo?.[msg.photo.length - 1]; // Get highest resolution
+    if (!photo) return;
+    
+    // Check file size (10MB limit)
+    if (photo.file_size && photo.file_size > 10 * 1024 * 1024) {
+      await bot.sendMessage(chatId, '❌ File size must be less than 10MB.');
+      return;
+    }
+    
+    // Download and save photo
+    const fileId = photo.file_id;
+    const file = await bot.getFile(fileId);
+    const fileName = `${Date.now()}_photo.jpg`;
+    const uploadsDir = path.join(process.cwd(), 'uploads');
+    
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+    
+    const filePath = path.join(uploadsDir, fileName);
+    
+    if (file.file_path) {
+      const fileStream = await bot.downloadFile(fileId, uploadsDir);
+      fs.renameSync(path.join(uploadsDir, path.basename(file.file_path)), filePath);
+    }
+    
+    // Add file to current address
+    const currentIndex = userState.currentAddressIndex || 0;
+    if (!userState.deliveryAddresses[currentIndex].attachedFiles) {
+      userState.deliveryAddresses[currentIndex].attachedFiles = [];
+    }
+    
+    userState.deliveryAddresses[currentIndex].attachedFiles.push(fileName);
+    userStates.set(telegramId, userState);
+    
+    await bot.sendMessage(chatId, `✅ Photo uploaded successfully! Send more files or type "done" to continue.`);
+    
+  } catch (error) {
+    console.error('Error handling photo upload:', error);
+    await bot.sendMessage(chatId, '❌ Error uploading photo. Please try again.');
   }
 });
 

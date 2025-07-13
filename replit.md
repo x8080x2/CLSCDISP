@@ -10,11 +10,12 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-### July 13, 2025 - Added File Upload Support and Admin Notifications
-- **File Upload System**: Added support for customers to upload files for each delivery address
-- **Database Schema**: Added `delivery_addresses` table with file attachments support
-- **File Management**: Customers can upload up to 5 files per delivery address (PDF, DOC, DOCX, TXT, JPG, JPEG, PNG)
+### July 13, 2025 - Enhanced Telegram Bot with File Upload Support
+- **Telegram Order Placement**: Users can now place complete orders through Telegram bot with file uploads
+- **Multi-Address Support**: Document orders support multiple delivery addresses (up to the document count)
+- **File Upload System**: Customers can upload files for each delivery address via Telegram or web interface
 - **Admin Notifications**: New orders and files are automatically sent to multiple Telegram admin IDs
+- **Real-time Processing**: Orders placed via Telegram are immediately processed and notifications sent
 - **Security**: File uploads are validated for type and size (10MB limit)
 
 ### July 13, 2025 - Separated Customer and Admin Interfaces
@@ -80,8 +81,11 @@ Preferred communication style: Simple, everyday language.
 ### Telegram Bot Features
 - **User Registration**: Automatic account creation on first interaction
 - **Service Pricing**: Multi-tier delivery service options (standard, express, same-day)
-- **Order Management**: Complete order lifecycle through bot commands
+- **Order Management**: Complete order lifecycle through bot commands including file uploads
+- **Multi-Address Orders**: Support for document orders with multiple delivery addresses
+- **File Upload**: Direct file upload support for documents and photos via Telegram
 - **Payment Processing**: Balance management and transaction handling
+- **Admin Notifications**: Automatic order and file notifications to multiple admin IDs
 
 ## Data Flow
 
