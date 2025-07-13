@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertOrderSchema, insertTransactionSchema } from "@shared/schema";
 import { sendOrderUpdate } from "./telegram-bot";
+import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Stats endpoint
@@ -137,7 +138,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check for existing pending orders (optional business rule)
-      const activeOrders = await storage.getUserActiveOrders(orderData.userId);
+      const userOrders = await storage.getUserOrders(orderData.userId);
+      const activeOrders = userOrders.filter(order => ['pending', 'in_progress'].includes(order.status));
       if (activeOrders.length >= 5) {
         return res.status(400).json({ 
           message: "Maximum of 5 active orders allowed per user" 
