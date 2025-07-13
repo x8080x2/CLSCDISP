@@ -15,7 +15,7 @@ export class OrderValidation {
       standard: 20,
       express: 35,
       same_day: 50,
-      document: 16,
+      document: 16.50,
     };
 
     let baseCost = 0;

@@ -14,7 +14,7 @@ const SERVICE_PRICES = {
   standard: { base: 20, name: 'Standard Delivery' },
   express: { base: 35, name: 'Express Delivery' },
   same_day: { base: 50, name: 'Same Day Delivery' },
-  document: { pricePerDocument: 16, minDocuments: 3, name: 'Document Sendout' },
+  document: { pricePerDocument: 16.50, minDocuments: 3, name: 'Document Sendout' },
   shipping_label: { price: 11, name: 'Shipping Label' }
 };
 
@@ -105,7 +105,7 @@ bot.onText(/\/pricing/, async (msg) => {
 ⚡ *Express Delivery* - $35
 🏃 *Same Day Delivery* - $50
 
-📄 *Document Sendout* - $16 per document (min 3)
+📄 *Document Sendout* - $16.50 per document (min 3)
 🏷️ *Shipping Label* - $11 each
 
 *Additional fees may apply based on distance.*

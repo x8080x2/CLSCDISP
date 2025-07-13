@@ -323,7 +323,7 @@ function SendOutModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
             <div className="p-3 bg-blue-50 rounded-lg">
               <p className="text-sm text-blue-800 font-medium">Estimated Cost</p>
               <div className="text-sm text-blue-700 mt-1">
-                <p>Documents: {docCount} × $16 = ${baseCost}</p>
+                <p>Documents: {docCount} × $16.50 = ${baseCost}</p>
                 {labelCount > 0 && <p>Labels: {labelCount} × $11 = ${labelCost}</p>}
                 <p>Distance Fee: ~$10</p>
                 <p className="font-semibold border-t border-blue-200 pt-1 mt-1">
