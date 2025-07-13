@@ -264,7 +264,7 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
             <span>Create New Order</span>
           </DialogTitle>
           <DialogDescription>
-            Fill in the details for your same day document send out. Available Monday-Saturday, 24 hours. Each document needs a separate delivery address.
+            Order placed before 3PM will move same day, varies by Courier 🚚 Service. Monday - Saturday, 24/6. 
           </DialogDescription>
         </DialogHeader>
 
@@ -309,13 +309,13 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
                 className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
               />
               <Label htmlFor="labelCourier" className="text-sm font-medium text-blue-900 cursor-pointer">
-                Add Label Courier Service (+$11 per delivery address)
+                Courier Service Shipping Label (+$11 per delivery address)
               </Label>
             </div>
             <div className="flex items-center space-x-2 px-3">
               <AlertTriangle className="w-4 h-4 text-orange-500" />
               <p className="text-xs text-orange-700 italic">
-                Don't click if you have your own label
+                Don't click if you have your own shipping label
               </p>
             </div>
           </div>
@@ -332,20 +332,7 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
             />
           </div>
 
-          {/* Pickup Address */}
-          <div className="space-y-2">
-            <Label htmlFor="pickupAddress">Pickup Address *</Label>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-              <Input
-                id="pickupAddress"
-                value={formData.pickupAddress}
-                onChange={(e) => handleInputChange("pickupAddress", e.target.value)}
-                placeholder="Enter pickup location"
-                className="pl-10"
-              />
-            </div>
-          </div>
+          
 
           {/* Delivery Addresses */}
           <div className="space-y-4">
