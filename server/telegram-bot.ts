@@ -2,9 +2,14 @@ import TelegramBot from 'node-telegram-bot-api';
 import { storage } from './storage';
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || process.env.BOT_TOKEN || "";
+const ADMIN_IDS = (process.env.TELEGRAM_ADMIN_IDS || "").split(",").map(id => id.trim()).filter(id => id);
 
 if (!BOT_TOKEN) {
   console.warn("TELEGRAM_BOT_TOKEN not provided - Telegram bot features will be disabled");
+}
+
+if (ADMIN_IDS.length === 0) {
+  console.warn("TELEGRAM_ADMIN_IDS not provided - Admin notifications will be disabled");
 }
 
 export const bot = BOT_TOKEN ? new TelegramBot(BOT_TOKEN, { polling: true }) : null;
@@ -493,5 +498,102 @@ export async function sendOrderUpdate(telegramId: string, orderNumber: string, n
     await bot.sendMessage(telegramId, message, { parse_mode: 'Markdown' });
   } catch (error) {
     console.error('Error sending order update:', error);
+  }
+}
+
+// Function to send new order notification to all admins
+export async function sendNewOrderToAdmins(orderDetails: any) {
+  if (!bot || ADMIN_IDS.length === 0) {
+    console.log('Telegram bot not available or no admin IDs configured - admin notification not sent');
+    return;
+  }
+
+  try {
+    let message = `🔔 *New Order Received*\n\n`;
+    message += `📋 *Order:* ${orderDetails.orderNumber}\n`;
+    message += `👤 *Customer:* ${orderDetails.user.firstName} ${orderDetails.user.lastName || ''} (@${orderDetails.user.username})\n`;
+    message += `📝 *Description:* ${orderDetails.description}\n`;
+    message += `📍 *Pickup:* ${orderDetails.pickupAddress}\n`;
+    message += `🎯 *Delivery:* ${orderDetails.deliveryAddress}\n`;
+    message += `💰 *Total:* $${orderDetails.totalCost}\n`;
+    message += `📅 *Created:* ${new Date(orderDetails.createdAt).toLocaleString()}\n\n`;
+    
+    if (orderDetails.specialInstructions) {
+      message += `📝 *Special Instructions:* ${orderDetails.specialInstructions}\n\n`;
+    }
+
+    // Send to all admin IDs
+    for (const adminId of ADMIN_IDS) {
+      try {
+        await bot.sendMessage(adminId, message, { parse_mode: 'Markdown' });
+      } catch (error) {
+        console.error(`Error sending notification to admin ${adminId}:`, error);
+      }
+    }
+  } catch (error) {
+    console.error('Error sending new order notification to admins:', error);
+  }
+}
+
+// Function to send order files to all admins
+export async function sendOrderFilesToAdmins(orderDetails: any, deliveryAddresses: any[]) {
+  if (!bot || ADMIN_IDS.length === 0) {
+    console.log('Telegram bot not available or no admin IDs configured - admin files not sent');
+    return;
+  }
+
+  try {
+    for (const adminId of ADMIN_IDS) {
+      try {
+        // Send order summary first
+        let message = `📎 *Order Files - ${orderDetails.orderNumber}*\n\n`;
+        message += `👤 *Customer:* ${orderDetails.user.firstName} ${orderDetails.user.lastName || ''}\n`;
+        message += `📝 *Description:* ${orderDetails.description}\n\n`;
+        
+        await bot.sendMessage(adminId, message, { parse_mode: 'Markdown' });
+
+        // Send files for each delivery address
+        for (let i = 0; i < deliveryAddresses.length; i++) {
+          const address = deliveryAddresses[i];
+          
+          if (address.attachedFiles && address.attachedFiles.length > 0) {
+            // Send address info
+            const addressMessage = `📍 *Delivery Address ${i + 1}:*\n` +
+              `Name: ${address.name}\n` +
+              `Address: ${address.address}\n` +
+              `${address.description ? `Notes: ${address.description}\n` : ''}\n` +
+              `Files: ${address.attachedFiles.length} file(s)`;
+            
+            await bot.sendMessage(adminId, addressMessage, { parse_mode: 'Markdown' });
+
+            // Send each file
+            for (const fileName of address.attachedFiles) {
+              try {
+                const filePath = `uploads/${fileName}`;
+                await bot.sendDocument(adminId, filePath, {
+                  caption: `📎 File for ${address.name} - ${address.address}`
+                });
+              } catch (fileError) {
+                console.error(`Error sending file ${fileName} to admin ${adminId}:`, fileError);
+                await bot.sendMessage(adminId, `❌ Failed to send file: ${fileName}`, { parse_mode: 'Markdown' });
+              }
+            }
+          } else {
+            // Send address info without files
+            const addressMessage = `📍 *Delivery Address ${i + 1}:*\n` +
+              `Name: ${address.name}\n` +
+              `Address: ${address.address}\n` +
+              `${address.description ? `Notes: ${address.description}\n` : ''}` +
+              `Files: No files attached`;
+            
+            await bot.sendMessage(adminId, addressMessage, { parse_mode: 'Markdown' });
+          }
+        }
+      } catch (error) {
+        console.error(`Error sending files to admin ${adminId}:`, error);
+      }
+    }
+  } catch (error) {
+    console.error('Error sending order files to admins:', error);
   }
 }

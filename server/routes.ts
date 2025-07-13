@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertOrderSchema, insertTransactionSchema, insertDeliveryAddressSchema } from "@shared/schema";
-import { sendOrderUpdate } from "./telegram-bot";
+import { sendOrderUpdate, sendNewOrderToAdmins, sendOrderFilesToAdmins } from "./telegram-bot";
 import { z } from "zod";
 import multer from "multer";
 import path from "path";
@@ -320,6 +320,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get order with details including delivery addresses
       const orderWithDetails = await storage.getOrderWithDetails(order.id);
+      
+      // Send notifications to admins
+      try {
+        await sendNewOrderToAdmins(orderWithDetails);
+        
+        // Send files to admins if there are any
+        if (orderWithDetails.deliveryAddresses && orderWithDetails.deliveryAddresses.length > 0) {
+          await sendOrderFilesToAdmins(orderWithDetails, orderWithDetails.deliveryAddresses);
+        }
+      } catch (notifyError) {
+        console.warn('Failed to send admin notifications:', notifyError);
+        // Don't fail the order creation if admin notification fails
+      }
+      
       res.json(orderWithDetails);
     } catch (error) {
       console.error("Error creating order:", error);

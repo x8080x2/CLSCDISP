@@ -10,6 +10,13 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### July 13, 2025 - Added File Upload Support and Admin Notifications
+- **File Upload System**: Added support for customers to upload files for each delivery address
+- **Database Schema**: Added `delivery_addresses` table with file attachments support
+- **File Management**: Customers can upload up to 5 files per delivery address (PDF, DOC, DOCX, TXT, JPG, JPEG, PNG)
+- **Admin Notifications**: New orders and files are automatically sent to multiple Telegram admin IDs
+- **Security**: File uploads are validated for type and size (10MB limit)
+
 ### July 13, 2025 - Separated Customer and Admin Interfaces
 - **Customer Interface**: Created `/` route with customer-focused dashboard
 - **Admin Interface**: Created `/admin/*` routes with admin-specific navigation and styling
@@ -113,6 +120,7 @@ Preferred communication style: Simple, everyday language.
 ### Environment Configuration
 - **DATABASE_URL**: PostgreSQL connection string (required)
 - **TELEGRAM_BOT_TOKEN**: Telegram bot authentication token
+- **TELEGRAM_ADMIN_IDS**: Comma-separated list of Telegram admin IDs for notifications (e.g., "123456789,987654321")
 - **NODE_ENV**: Environment-specific configuration
 
 ### Development Workflow
