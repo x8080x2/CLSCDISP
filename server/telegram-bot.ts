@@ -27,6 +27,26 @@ const userStates: Map<string, any> = new Map();
 
 // Command handlers
 if (bot) {
+// Persistent inline keyboard for main menu
+const getMainKeyboard = () => ({
+  reply_markup: {
+    inline_keyboard: [
+      [
+        { text: '💰 Balance', callback_data: 'main_balance' },
+        { text: '📦 New Order', callback_data: 'main_order' }
+      ],
+      [
+        { text: '📋 Order History', callback_data: 'main_history' },
+        { text: '🔍 Order Status', callback_data: 'main_status' }
+      ],
+      [
+        { text: '💵 Pricing', callback_data: 'main_pricing' },
+        { text: 'ℹ️ Help', callback_data: 'main_help' }
+      ]
+    ]
+  }
+});
+
 bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
   const telegramId = msg.from?.id.toString() || "";
@@ -45,9 +65,9 @@ bot.onText(/\/start/, async (msg) => {
         lastName,
       });
 
-      await bot.sendMessage(chatId, `🎉 Welcome to DocuBot, ${firstName}!\n\nYour account has been created successfully. Your current balance is $${user.balance}.\n\nUse /help to see available commands.`);
+      await bot.sendMessage(chatId, `🎉 Welcome to DocuBot, ${firstName}!\n\nYour account has been created successfully. Your current balance is $${user.balance}.\n\nChoose an option below:`, getMainKeyboard());
     } else {
-      await bot.sendMessage(chatId, `👋 Welcome back, ${firstName}!\n\nYour current balance is $${user.balance}.\n\nUse /help to see available commands.`);
+      await bot.sendMessage(chatId, `👋 Welcome back, ${firstName}!\n\nYour current balance is $${user.balance}.\n\nChoose an option below:`, getMainKeyboard());
     }
   } catch (error) {
     console.error('Error in /start command:', error);
@@ -62,22 +82,25 @@ bot.onText(/\/help/, async (msg) => {
 🤖 *DocuBot Commands*
 
 💰 *Balance & Account:*
-/balance - Check your current balance
-/history - View your order history
+Check your current balance
 
 📦 *Orders:*
-/order - Place a new document sendout order
-/status - Check order status
+Place a new document sendout order
 
-ℹ️ *Information:*
-/help - Show this help message
-/pricing - View service pricing
+📋 *History:*
+View your order history
+
+🔍 *Status:*
+Check order status
+
+💵 *Pricing:*
+View service pricing
 
 📞 *Support:*
 Contact @admin for assistance
   `;
 
-  await bot.sendMessage(chatId, helpText, { parse_mode: 'Markdown' });
+  await bot.sendMessage(chatId, helpText, { ...getMainKeyboard(), parse_mode: 'Markdown' });
 });
 
 bot.onText(/\/balance/, async (msg) => {
@@ -88,14 +111,14 @@ bot.onText(/\/balance/, async (msg) => {
     const user = await storage.getUserByTelegramId(telegramId);
 
     if (!user) {
-      await bot.sendMessage(chatId, '❌ Please use /start to register first.');
+      await bot.sendMessage(chatId, '❌ Please use /start to register first.', getMainKeyboard());
       return;
     }
 
-    await bot.sendMessage(chatId, `💰 Your current balance: $${user.balance}`);
+    await bot.sendMessage(chatId, `💰 Your current balance: $${user.balance}`, getMainKeyboard());
   } catch (error) {
     console.error('Error in /balance command:', error);
-    await bot.sendMessage(chatId, '❌ Error retrieving balance. Please try again later.');
+    await bot.sendMessage(chatId, '❌ Error retrieving balance. Please try again later.', getMainKeyboard());
   }
 });
 
@@ -110,10 +133,10 @@ bot.onText(/\/pricing/, async (msg) => {
 
 *Additional fees may apply based on distance.*
 
-Use /order to place an order!
+Use the menu below to place an order!
   `;
 
-  await bot.sendMessage(chatId, pricingText, { parse_mode: 'Markdown' });
+  await bot.sendMessage(chatId, pricingText, { ...getMainKeyboard(), parse_mode: 'Markdown' });
 });
 
 bot.onText(/\/order/, async (msg) => {
@@ -234,14 +257,26 @@ bot.on('message', async (msg) => {
         userState.documentCount = documentCount;
         userState.step = 'description';
         userStates.set(telegramId, userState);
-        await bot.sendMessage(chatId, '📝 Please describe the documents you need delivered:');
+        await bot.sendMessage(chatId, '📝 Please describe the documents you need delivered:', {
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]
+            ]
+          }
+        });
         break;
 
       case 'description':
         userState.description = msg.text;
         userState.step = 'pickup';
         userStates.set(telegramId, userState);
-        await bot.sendMessage(chatId, '📍 Please provide the pickup address:');
+        await bot.sendMessage(chatId, '📍 Please provide the pickup address:', {
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]
+            ]
+          }
+        });
         break;
 
       case 'pickup':
@@ -253,7 +288,14 @@ bot.on('message', async (msg) => {
           userState.currentAddressIndex = 0;
           userState.step = 'delivery_address_name';
           userStates.set(telegramId, userState);
-          await bot.sendMessage(chatId, `📍 *Delivery Address 1 of ${userState.documentCount}*\n\nPlease provide the recipient name:`, { parse_mode: 'Markdown' });
+          await bot.sendMessage(chatId, `📍 *Delivery Address 1 of ${userState.documentCount}*\n\nPlease provide the recipient name:`, { 
+            parse_mode: 'Markdown',
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]
+              ]
+            }
+          });
         } else {
           userState.step = 'delivery';
           userStates.set(telegramId, userState);
@@ -404,7 +446,7 @@ Click below to confirm or cancel your order.`;
         const foundOrder = await storage.getOrderByNumber(orderNumber);
 
         if (!foundOrder || foundOrder.user.id !== user.id) {
-          await bot.sendMessage(chatId, '❌ Order not found or does not belong to you.');
+          await bot.sendMessage(chatId, '❌ Order not found or does not belong to you.', getMainKeyboard());
         } else {
           const statusEmoji = {
             pending: '⏳',
@@ -426,7 +468,7 @@ ${statusEmoji} *Order Status: ${foundOrder.status.replace('_', ' ').toUpperCase(
 ${foundOrder.notes ? `📝 *Notes:* ${foundOrder.notes}` : ''}
           `;
 
-          await bot.sendMessage(chatId, statusText, { parse_mode: 'Markdown' });
+          await bot.sendMessage(chatId, statusText, { ...getMainKeyboard(), parse_mode: 'Markdown' });
         }
 
         userStates.delete(telegramId);
@@ -457,6 +499,94 @@ bot.on('callback_query', async (query) => {
     const userState = userStates.get(telegramId);
 
     switch (data) {
+      case 'main_balance':
+        try {
+          await bot.sendMessage(chatId, `💰 Your current balance: $${user.balance}`, getMainKeyboard());
+        } catch (error) {
+          console.error('Error in balance callback:', error);
+          await bot.sendMessage(chatId, '❌ Error retrieving balance.', getMainKeyboard());
+        }
+        break;
+
+      case 'main_order':
+        userStates.set(telegramId, { step: 'service_type' });
+        const serviceOptions = {
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '📄 Document Sendout - $16.50 each', callback_data: 'service_document' }],
+              [{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]
+            ]
+          }
+        };
+        await bot.sendMessage(chatId, '🚀 We offer Document Sendout service:\n\n📄 Document Sendout - $16.50 per document (minimum 3 documents)\n\nClick below to continue:', serviceOptions);
+        break;
+
+      case 'main_history':
+        try {
+          const orders = await storage.getUserOrders(user.id);
+          if (orders.length === 0) {
+            await bot.sendMessage(chatId, '📋 No orders found. Use the menu below to place your first order!', getMainKeyboard());
+            break;
+          }
+
+          let historyText = '📋 *Your Order History:*\n\n';
+          orders.slice(0, 10).forEach(order => {
+            const statusEmoji = {
+              pending: '⏳',
+              in_progress: '🚚',
+              completed: '✅',
+              cancelled: '❌'
+            }[order.status] || '❓';
+
+            historyText += `${statusEmoji} *${order.orderNumber}*\n`;
+            historyText += `${order.description}\n`;
+            historyText += `$${order.totalCost} - ${order.status.replace('_', ' ')}\n\n`;
+          });
+
+          await bot.sendMessage(chatId, historyText, { ...getMainKeyboard(), parse_mode: 'Markdown' });
+        } catch (error) {
+          console.error('Error in history callback:', error);
+          await bot.sendMessage(chatId, '❌ Error retrieving order history.', getMainKeyboard());
+        }
+        break;
+
+      case 'main_status':
+        await bot.sendMessage(chatId, '🔍 Please enter your order number (e.g., ORD-2024-123456):', getMainKeyboard());
+        userStates.set(telegramId, { step: 'status_check' });
+        break;
+
+      case 'main_pricing':
+        const pricingText = `
+💵 *Service Pricing*
+
+📄 *Document Sendout* - $16.50 per document (minimum 3)
+🏷️ *Shipping Label* - $11 each
+
+*Additional fees may apply based on distance.*
+        `;
+        await bot.sendMessage(chatId, pricingText, { ...getMainKeyboard(), parse_mode: 'Markdown' });
+        break;
+
+      case 'main_help':
+        const helpText = `
+🤖 *DocuBot Help*
+
+💰 *Balance:* Check your current balance
+📦 *New Order:* Place a document sendout order
+📋 *Order History:* View your past orders
+🔍 *Order Status:* Check specific order status
+💵 *Pricing:* View service pricing
+
+📞 *Support:* Contact @admin for assistance
+        `;
+        await bot.sendMessage(chatId, helpText, { ...getMainKeyboard(), parse_mode: 'Markdown' });
+        break;
+
+      case 'back_to_menu':
+        await bot.sendMessage(chatId, '🏠 Main Menu - Choose an option:', getMainKeyboard());
+        userStates.delete(telegramId);
+        break;
+
       case 'service_document':
         if (userState?.step === 'service_type') {
           userState.orderType = 'document';
@@ -559,7 +689,7 @@ bot.on('callback_query', async (query) => {
 
 Your order is now pending and will be processed soon!`;
 
-          await bot.sendMessage(chatId, successText, { parse_mode: 'Markdown' });
+          await bot.sendMessage(chatId, successText, { ...getMainKeyboard(), parse_mode: 'Markdown' });
 
           // Send notifications to admins
           try {
@@ -585,7 +715,7 @@ Your order is now pending and will be processed soon!`;
             message_id: query.message?.message_id
           });
 
-          await bot.sendMessage(chatId, '❌ Order cancelled.');
+          await bot.sendMessage(chatId, '❌ Order cancelled.', getMainKeyboard());
           userStates.delete(telegramId);
         }
         break;
