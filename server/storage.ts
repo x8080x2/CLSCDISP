@@ -224,18 +224,12 @@ export class DatabaseStorage implements IStorage {
 
   async getStats(): Promise<{
     totalOrders: number;
-    activeUsers: number;
     totalRevenue: string;
     pendingOrders: number;
   }> {
     const [totalOrdersResult] = await db
       .select({ count: sql<number>`count(*)` })
       .from(orders);
-
-    const [activeUsersResult] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(users)
-      .where(eq(users.isActive, true));
 
     const [totalRevenueResult] = await db
       .select({ total: sql<string>`sum(total_cost)` })
@@ -249,7 +243,6 @@ export class DatabaseStorage implements IStorage {
 
     return {
       totalOrders: totalOrdersResult.count,
-      activeUsers: activeUsersResult.count,
       totalRevenue: totalRevenueResult.total || "0.00",
       pendingOrders: pendingOrdersResult.count,
     };
