@@ -67,7 +67,7 @@ export default function CustomerDashboard() {
                 <Send className="text-white text-lg" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">DocuBot</h1>
+                <h1 className="text-[25px] font-extrabold text-[#326acf]">CLS Dispatch Service</h1>
                 <p className="text-sm text-gray-500">Document Delivery Service</p>
               </div>
             </div>
@@ -100,7 +100,6 @@ export default function CustomerDashboard() {
           </div>
         </div>
       </header>
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
@@ -292,7 +291,6 @@ export default function CustomerDashboard() {
           </CardContent>
         </Card>
       </div>
-
       <NewOrderModal 
         open={showNewOrderModal} 
         onOpenChange={setShowNewOrderModal} 
