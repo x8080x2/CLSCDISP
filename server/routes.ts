@@ -109,15 +109,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const orderData = insertOrderSchema.parse(req.body);
       
-      // Verify user exists and has sufficient balance
+      // Verify user exists
       const user = await storage.getUser(orderData.userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
 
+      // Validate order data
+      const { documentCount, shippingLabels, serviceType } = req.body;
+      
+      // Validate document count for document orders
+      if (serviceType === 'document') {
+        const docCount = parseInt(documentCount || '0');
+        if (docCount < 3) {
+          return res.status(400).json({ 
+            message: "Document sendout requires a minimum of 3 documents" 
+          });
+        }
+      }
+
+      // Verify balance
       const totalCost = parseFloat(orderData.totalCost);
       if (parseFloat(user.balance) < totalCost) {
-        return res.status(400).json({ message: "Insufficient balance" });
+        return res.status(400).json({ 
+          message: `Insufficient balance. Required: $${totalCost}, Available: $${user.balance}` 
+        });
+      }
+
+      // Check for existing pending orders (optional business rule)
+      const activeOrders = await storage.getUserActiveOrders(orderData.userId);
+      if (activeOrders.length >= 5) {
+        return res.status(400).json({ 
+          message: "Maximum of 5 active orders allowed per user" 
+        });
       }
 
       // Create order
@@ -136,11 +160,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const newBalance = (parseFloat(user.balance) - totalCost).toFixed(2);
       await storage.updateUserBalance(orderData.userId, newBalance);
 
+      // Send notification to user if Telegram bot is enabled
+      if (user.telegramId) {
+        try {
+          await sendOrderUpdate(
+            user.telegramId, 
+            order.orderNumber, 
+            'pending',
+            'Your order has been created and is pending processing.'
+          );
+        } catch (notifyError) {
+          console.warn('Failed to send order notification:', notifyError);
+          // Don't fail the order creation if notification fails
+        }
+      }
+
       // Get order with user data
       const orderWithUser = await storage.getOrder(order.id);
       res.json(orderWithUser);
     } catch (error) {
       console.error("Error creating order:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid order data", 
+          errors: error.errors 
+        });
+      }
       res.status(500).json({ message: "Failed to create order" });
     }
   });

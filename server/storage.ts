@@ -1,6 +1,6 @@
 import { users, orders, transactions, type User, type InsertUser, type Order, type InsertOrder, type Transaction, type InsertTransaction, type OrderWithUser, type TransactionWithDetails } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, or, like, sql } from "drizzle-orm";
+import { eq, desc, and, or, like, sql, inArray } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -77,9 +77,9 @@ export class DatabaseStorage implements IStorage {
       .from(orders)
       .leftJoin(users, eq(orders.userId, users.id))
       .where(eq(orders.id, id));
-    
+
     if (!order || !order.users) return undefined;
-    
+
     return {
       ...order.orders,
       user: order.users,
@@ -92,9 +92,9 @@ export class DatabaseStorage implements IStorage {
       .from(orders)
       .leftJoin(users, eq(orders.userId, users.id))
       .where(eq(orders.orderNumber, orderNumber));
-    
+
     if (!order || !order.users) return undefined;
-    
+
     return {
       ...order.orders,
       user: order.users,
@@ -102,7 +102,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createOrder(insertOrder: InsertOrder): Promise<Order> {
-    const orderNumber = `ORD-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
+    // Generate a more readable order number
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const timestamp = now.getTime().toString().slice(-6); // Last 6 digits
+    const orderNumber = `ORD-${year}${month}${day}-${timestamp}`;
+
     const [order] = await db
       .insert(orders)
       .values({ ...insertOrder, orderNumber })
