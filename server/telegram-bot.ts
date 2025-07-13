@@ -68,9 +68,9 @@ bot.onText(/\/start/, async (msg) => {
         lastName,
       });
 
-      await bot.sendMessage(chatId, `🎉 Welcome to DocuBot, ${firstName}!\n\nYour account has been created successfully. Your current balance is $${user.balance}.\n\nChoose an option below:`, getMainKeyboard());
+      await bot.sendMessage(chatId, `🎉 Welcome to CLS Dispatch Service, ${firstName}!`, getMainKeyboard());
     } else {
-      await bot.sendMessage(chatId, `👋 Welcome back, ${firstName}!\n\nYour current balance is $${user.balance}.\n\nChoose an option below:`, getMainKeyboard());
+      await bot.sendMessage(chatId, `👋 Welcome back, ${firstName}!\nYour CLSDS current balance is $${user.balance}.`, getMainKeyboard());
     }
   } catch (error) {
     console.error('Error in /start command:', error);
