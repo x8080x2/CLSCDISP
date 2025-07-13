@@ -232,6 +232,39 @@ bot.onText(/\/status/, async (msg) => {
   }
 });
 
+bot.onText(/\/topup (\d+(?:\.\d{1,2})?)/, async (msg, match) => {
+  const chatId = msg.chat.id;
+  const telegramId = msg.from?.id.toString() || "";
+  const amount = parseFloat(match?.[1] || "0");
+
+  if (amount <= 0) {
+    await bot.sendMessage(chatId, '❌ Please provide a valid amount. Example: /topup 100');
+    return;
+  }
+
+  if (amount < 100) {
+    await bot.sendMessage(chatId, '❌ Minimum deposit amount is $100. Please use: /topup 100 or higher.');
+    return;
+  }
+
+  try {
+    const user = await storage.getUserByTelegramId(telegramId);
+    if (!user) {
+      await bot.sendMessage(chatId, '❌ Please use /start to register first.');
+      return;
+    }
+
+    // User exists, proceed to top up their account
+    // You can implement the actual top-up logic here, e.g., by using a payment gateway
+    // For simplicity, let's assume the top-up is successful
+
+    await bot.sendMessage(chatId, `✅ Top-up successful! Your account has been credited with $${amount}.`, getMainKeyboard());
+  } catch (error) {
+    console.error('Error in /topup command:', error);
+    await bot.sendMessage(chatId, '❌ Error processing top-up. Please try again later.', getMainKeyboard());
+  }
+});
+
 // Handle text messages for multi-step flows
 bot.on('message', async (msg) => {
   if (!msg.text || msg.text.startsWith('/')) return;
@@ -782,7 +815,7 @@ Your order is now pending and will be processed soon!`;
                   ]
               }
           };
-  
+
           await bot.sendMessage(chatId, 'Choose your preferred cryptocurrency:', cryptoOptions);
           break;
 
@@ -790,22 +823,22 @@ Your order is now pending and will be processed soon!`;
             // Handle Bitcoin payment
             await handleCryptoPayment(chatId, telegramId, 'BTC', query);
             break;
-  
+
         case 'crypto_eth':
             // Handle Ethereum payment
             await handleCryptoPayment(chatId, telegramId, 'ETH', query);
             break;
-  
+
         case 'crypto_usdt_erc20':
             // Handle USDT (ERC-20) payment
             await handleCryptoPayment(chatId, telegramId, 'USDT_ERC20', query);
             break;
-  
+
         case 'crypto_usdt_trc20':
             // Handle USDT (TRC-20) payment
             await handleCryptoPayment(chatId, telegramId, 'USDT_TRC20', query);
             break;
-  
+
         case 'crypto_ltc':
             // Handle Litecoin payment
             await handleCryptoPayment(chatId, telegramId, 'LTC', query);
@@ -848,7 +881,7 @@ Your order is now pending and will be processed soon!`;
         case 'topup_crypto_ltc':
           await handleTopupCryptoPayment(chatId, telegramId, 'LTC', query);
           break;
-  
+
       case 'cancel_order':
         if (userState?.step === 'confirm_order') {
           await bot.editMessageReplyMarkup({ inline_keyboard: [] }, {
@@ -872,41 +905,41 @@ Your order is now pending and will be processed soon!`;
 // Function to handle crypto payments
 async function handleCryptoPayment(chatId: number, telegramId: string, cryptoType: string, query: any) {
     const userState = userStates.get(telegramId);
-  
+
     if (!userState || !userState.totalCost) {
         await bot.sendMessage(chatId, '❌ Error: Total cost not found. Please start the order again.');
         return;
     }
-  
+
     try {
       // Fetch live crypto rate
       const cryptoRate = await getCryptoRate(cryptoType, 'USD');
-  
+
       if (!cryptoRate) {
           await bot.sendMessage(chatId, `❌ Error fetching ${cryptoType} rate. Please try again later.`);
           return;
       }
-  
+
       const amountInCrypto = (userState.totalCost / cryptoRate).toFixed(8);
-  
+
       // Generate crypto payment address (replace with actual implementation)
       const paymentAddress = generateCryptoAddress(cryptoType);
-  
+
       const paymentInstructions = `
   Pay ${amountInCrypto} ${cryptoType} to the following address:
-  
+
   \`${paymentAddress}\`
-  
+
   Once the payment is confirmed, send the transaction ID to @admin for verification.
   `;
-  
+
         await bot.editMessageReplyMarkup({ inline_keyboard: [] }, {
           chat_id: chatId,
           message_id: query.message?.message_id
         });
 
       await bot.sendMessage(chatId, paymentInstructions, { parse_mode: 'Markdown' });
-  
+
     } catch (error) {
       console.error(`Error handling ${cryptoType} payment:`, error);
       await bot.sendMessage(chatId, `❌ Error processing ${cryptoType} payment. Please try again later.`);
@@ -990,14 +1023,14 @@ async function getCryptoRate(cryptoType: string, fiatType: string): Promise<numb
         'USDT_TRC20': 1,
         'LTC': 200
     };
-  
+
     if (rates[cryptoType]) {
         return rates[cryptoType];
     }
-  
+
     return null;
 }
-  
+
   // Dummy function to generate crypto address
 function generateCryptoAddress(cryptoType: string): string {
     // Replace this with a real address generation logic

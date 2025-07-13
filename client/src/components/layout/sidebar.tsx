@@ -65,9 +65,16 @@ function TopUpModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!amount) return;
+    const depositAmount = parseFloat(amount);
+
+    if (!amount || depositAmount <= 0) return;
+
+    if (depositAmount < 100) {
+      alert("Minimum deposit amount is $100");
+      return;
+    }
 
     topUpMutation.mutate({
       amount,

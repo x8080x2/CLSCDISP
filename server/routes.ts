@@ -130,20 +130,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { amount, description } = req.body;
       const userId = parseInt(req.params.id);
       
+      // Validate minimum deposit amount
+      const depositAmount = parseFloat(amount);
+      if (depositAmount < 100) {
+        return res.status(400).json({ message: "Minimum deposit amount is $100" });
+      }
+      
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
 
-      const newBalance = (parseFloat(user.balance) + parseFloat(amount)).toFixed(2);
+      const newBalance = (parseFloat(user.balance) + depositAmount).toFixed(2);
       const updatedUser = await storage.updateUserBalance(userId, newBalance);
 
       // Create transaction record
       await storage.createTransaction({
         userId,
         type: 'top_up',
-        amount: amount.toString(),
-        description: description || `Balance top-up of $${amount}`,
+        amount: depositAmount.toString(),
+        description: description || `Balance top-up of $${depositAmount}`,
       });
 
       res.json(updatedUser);
@@ -157,6 +163,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/balance/topup", async (req, res) => {
     try {
       const { amount, description } = req.body;
+      
+      // Validate minimum deposit amount
+      const depositAmount = parseFloat(amount);
+      if (depositAmount < 100) {
+        return res.status(400).json({ message: "Minimum deposit amount is $100" });
+      }
       
       // For demo purposes, use the first user or create a default admin user
       let users = await storage.getAllUsers();
@@ -174,15 +186,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         user = users[0];
       }
 
-      const newBalance = (parseFloat(user.balance) + parseFloat(amount)).toFixed(2);
+      const newBalance = (parseFloat(user.balance) + depositAmount).toFixed(2);
       const updatedUser = await storage.updateUserBalance(user.id, newBalance);
 
       // Create transaction record
       await storage.createTransaction({
         userId: user.id,
         type: 'top_up',
-        amount: amount.toString(),
-        description: description || `Balance top-up of $${amount}`,
+        amount: depositAmount.toString(),
+        description: description || `Balance top-up of $${depositAmount}`,
       });
 
       res.json(updatedUser);
