@@ -29,7 +29,7 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
   
   // Form state
   const [formData, setFormData] = useState({
-    serviceType: "",
+    serviceType: "same_day",
     documentCount: "",
     description: "",
     pickupAddress: "",
@@ -51,24 +51,10 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
 
   // Pricing logic
   const calculateCost = (serviceType: string, documentCount: string, labelCourier: boolean = false) => {
-    if (!serviceType || !documentCount) return "0.00";
+    if (!documentCount) return "0.00";
     
     const count = parseInt(documentCount) || 0;
-    let baseCost = 0;
-    
-    switch (serviceType) {
-      case "standard":
-        baseCost = count * 2.50;
-        break;
-      case "express":
-        baseCost = count * 4.00;
-        break;
-      case "same_day":
-        baseCost = count * 6.50;
-        break;
-      default:
-        baseCost = 0;
-    }
+    let baseCost = count * 6.50; // Same Day Send Out rate
     
     // Add label courier cost - $11 per delivery address
     if (labelCourier) {
@@ -145,8 +131,7 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.serviceType || !formData.documentCount || !formData.description || 
-        !formData.pickupAddress) {
+    if (!formData.documentCount || !formData.description || !formData.pickupAddress) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -244,7 +229,7 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
 
       // Reset form
       setFormData({
-        serviceType: "",
+        serviceType: "same_day",
         documentCount: "",
         description: "",
         pickupAddress: "",
@@ -279,7 +264,7 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
             <span>Create New Order</span>
           </DialogTitle>
           <DialogDescription>
-            Fill in the details for your document delivery order. Each document needs a separate delivery address.
+            Fill in the details for your same day document send out. Available Monday-Saturday, 24 hours. Each document needs a separate delivery address.
           </DialogDescription>
         </DialogHeader>
 
@@ -288,16 +273,14 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
             {/* Service Type */}
             <div className="space-y-2">
               <Label htmlFor="serviceType">Service Type *</Label>
-              <Select value={formData.serviceType} onValueChange={(value) => handleInputChange("serviceType", value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select delivery service" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="standard">Standard Delivery ($2.50/doc)</SelectItem>
-                  <SelectItem value="express">Express Delivery ($4.00/doc)</SelectItem>
-                  <SelectItem value="same_day">Same Day Delivery ($6.50/doc)</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-blue-900">Same Day Send Out</span>
+                  <span className="text-sm text-blue-700">$6.50/doc</span>
+                </div>
+                <p className="text-xs text-blue-600 mt-1">Available Mon-Sat, 24 hours</p>
+              </div>
+              <input type="hidden" value="same_day" onChange={() => handleInputChange("serviceType", "same_day")} />
             </div>
 
             {/* Document Count */}
