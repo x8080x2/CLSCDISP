@@ -4,8 +4,9 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Package, Plus, CreditCard, TrendingUp, Clock, CheckCircle } from "lucide-react";
+import { Package, Plus, CreditCard, TrendingUp, Clock, CheckCircle, Send, XCircle, FileText } from "lucide-react";
 import NewOrderModal from "@/components/modals/new-order-modal";
+import TopUpModal from "@/components/modals/top-up-modal";
 
 export default function CustomerDashboard() {
   const [showNewOrderModal, setShowNewOrderModal] = useState(false);
