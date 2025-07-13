@@ -36,11 +36,14 @@ const getMainKeyboard = () => ({
         { text: '📦 New Order', callback_data: 'main_order' }
       ],
       [
-        { text: '📋 Order History', callback_data: 'main_history' },
-        { text: '🔍 Order Status', callback_data: 'main_status' }
+        { text: '💳 Top Up', callback_data: 'main_topup' },
+        { text: '📋 Order History', callback_data: 'main_history' }
       ],
       [
-        { text: '💵 Pricing', callback_data: 'main_pricing' },
+        { text: '🔍 Order Status', callback_data: 'main_status' },
+        { text: '💵 Pricing', callback_data: 'main_pricing' }
+      ],
+      [
         { text: 'ℹ️ Help', callback_data: 'main_help' }
       ]
     ]
@@ -446,6 +449,44 @@ Choose your payment method:`;
 
 
 
+      case 'topup_amount':
+        const topupAmount = parseFloat(msg.text?.trim() || '0');
+        if (topupAmount < 10) {
+          await bot.sendMessage(chatId, '❌ Minimum top-up amount is $10. Please enter a valid amount:', {
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]
+              ]
+            }
+          });
+          return;
+        }
+
+        userState.topupAmount = topupAmount;
+        userState.step = 'topup_payment_method';
+        userStates.set(telegramId, userState);
+
+        const topupText = `💳 *Top Up Confirmation*
+
+💰 *Amount:* $${topupAmount}
+💳 *Your Current Balance:* $${user.balance}
+💵 *New Balance:* $${(parseFloat(user.balance) + topupAmount).toFixed(2)}
+
+Choose your payment method:`;
+
+        const topupButtons = [
+          [{ text: '₿ Pay with Crypto', callback_data: 'topup_crypto' }],
+          [{ text: '❌ Cancel', callback_data: 'back_to_menu' }]
+        ];
+
+        await bot.sendMessage(chatId, topupText, { 
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: topupButtons
+          }
+        });
+        break;
+
       case 'status_check':
         const orderNumber = msg.text.trim();
         const foundOrder = await storage.getOrderByNumber(orderNumber);
@@ -572,11 +613,24 @@ bot.on('callback_query', async (query) => {
         await bot.sendMessage(chatId, pricingText, { ...getMainKeyboard(), parse_mode: 'Markdown' });
         break;
 
+      case 'main_topup':
+        userStates.set(telegramId, { step: 'topup_amount' });
+        await bot.sendMessage(chatId, '💳 *Top Up Your Balance*\n\nPlease enter the amount you want to add to your balance (minimum $10):', {
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]
+            ]
+          }
+        });
+        break;
+
       case 'main_help':
         const helpText = `
 🤖 *DocuBot Help*
 
 💰 *Balance:* Check your current balance
+💳 *Top Up:* Add funds to your balance
 📦 *New Order:* Place a document sendout order
 📋 *Order History:* View your past orders
 🔍 *Order Status:* Check specific order status
@@ -756,6 +810,44 @@ Your order is now pending and will be processed soon!`;
             // Handle Litecoin payment
             await handleCryptoPayment(chatId, telegramId, 'LTC', query);
             break;
+
+        case 'topup_crypto':
+          if (userState?.step === 'topup_payment_method') {
+            const cryptoOptions = {
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: '₿ Bitcoin (BTC)', callback_data: 'topup_crypto_btc' }],
+                  [{ text: 'Ξ Ethereum (ETH)', callback_data: 'topup_crypto_eth' }],
+                  [{ text: 'USDT (ERC-20)', callback_data: 'topup_crypto_usdt_erc20' }],
+                  [{ text: 'USDT (TRC-20)', callback_data: 'topup_crypto_usdt_trc20' }],
+                  [{ text: 'Ł Litecoin (LTC)', callback_data: 'topup_crypto_ltc' }],
+                  [{ text: '❌ Cancel', callback_data: 'back_to_menu' }]
+                ]
+              }
+            };
+            await bot.sendMessage(chatId, 'Choose your preferred cryptocurrency for top-up:', cryptoOptions);
+          }
+          break;
+
+        case 'topup_crypto_btc':
+          await handleTopupCryptoPayment(chatId, telegramId, 'BTC', query);
+          break;
+
+        case 'topup_crypto_eth':
+          await handleTopupCryptoPayment(chatId, telegramId, 'ETH', query);
+          break;
+
+        case 'topup_crypto_usdt_erc20':
+          await handleTopupCryptoPayment(chatId, telegramId, 'USDT_ERC20', query);
+          break;
+
+        case 'topup_crypto_usdt_trc20':
+          await handleTopupCryptoPayment(chatId, telegramId, 'USDT_TRC20', query);
+          break;
+
+        case 'topup_crypto_ltc':
+          await handleTopupCryptoPayment(chatId, telegramId, 'LTC', query);
+          break;
   
       case 'cancel_order':
         if (userState?.step === 'confirm_order') {
@@ -819,6 +911,71 @@ async function handleCryptoPayment(chatId: number, telegramId: string, cryptoTyp
       console.error(`Error handling ${cryptoType} payment:`, error);
       await bot.sendMessage(chatId, `❌ Error processing ${cryptoType} payment. Please try again later.`);
     }
+}
+
+// Function to handle crypto payments for top-ups
+async function handleTopupCryptoPayment(chatId: number, telegramId: string, cryptoType: string, query: any) {
+  const userState = userStates.get(telegramId);
+
+  if (!userState || !userState.topupAmount) {
+    await bot.sendMessage(chatId, '❌ Error: Top-up amount not found. Please start the top-up process again.');
+    return;
+  }
+
+  try {
+    // Fetch live crypto rate
+    const cryptoRate = await getCryptoRate(cryptoType, 'USD');
+
+    if (!cryptoRate) {
+      await bot.sendMessage(chatId, `❌ Error fetching ${cryptoType} rate. Please try again later.`);
+      return;
+    }
+
+    const amountInCrypto = (userState.topupAmount / cryptoRate).toFixed(8);
+
+    // Generate crypto payment address (replace with actual implementation)
+    const paymentAddress = generateCryptoAddress(cryptoType);
+
+    const paymentInstructions = `
+💳 *Top-Up Payment Instructions*
+
+💰 *Amount:* $${userState.topupAmount}
+₿ *Pay:* ${amountInCrypto} ${cryptoType}
+
+📍 *Payment Address:*
+\`${paymentAddress}\`
+
+⚠️ *Important:*
+- Send EXACTLY ${amountInCrypto} ${cryptoType}
+- Once payment is confirmed, send the transaction ID to @admin
+- Your balance will be updated after verification
+- Payment expires in 30 minutes
+
+💳 *Current Balance:* $${userState.user?.balance || '0.00'}
+💵 *Balance After Top-up:* $${(parseFloat(userState.user?.balance || '0') + userState.topupAmount).toFixed(2)}
+`;
+
+    await bot.editMessageReplyMarkup({ inline_keyboard: [] }, {
+      chat_id: chatId,
+      message_id: query.message?.message_id
+    });
+
+    await bot.sendMessage(chatId, paymentInstructions, { 
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '🏠 Back to Menu', callback_data: 'back_to_menu' }]
+        ]
+      }
+    });
+
+    // Clear user state
+    userStates.delete(telegramId);
+
+  } catch (error) {
+    console.error(`Error handling ${cryptoType} top-up payment:`, error);
+    await bot.sendMessage(chatId, `❌ Error processing ${cryptoType} payment. Please try again later.`);
+  }
 }
 
 // Dummy function to get crypto rate
