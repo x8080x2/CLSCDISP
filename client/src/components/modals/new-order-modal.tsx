@@ -33,7 +33,8 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
     documentCount: "",
     description: "",
     pickupAddress: "",
-    totalCost: "0.00"
+    totalCost: "0.00",
+    labelCourier: false
   });
 
   // Multiple delivery addresses
@@ -49,7 +50,7 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
   });
 
   // Pricing logic
-  const calculateCost = (serviceType: string, documentCount: string) => {
+  const calculateCost = (serviceType: string, documentCount: string, labelCourier: boolean = false) => {
     if (!serviceType || !documentCount) return "0.00";
     
     const count = parseInt(documentCount) || 0;
@@ -69,17 +70,27 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
         baseCost = 0;
     }
     
+    // Add label courier cost - $11 per delivery address
+    if (labelCourier) {
+      const filledAddresses = deliveryAddresses.filter(addr => 
+        addr.name.trim() !== "" && addr.address.trim() !== ""
+      );
+      const addressCount = Math.max(filledAddresses.length, count);
+      baseCost += addressCount * 11;
+    }
+    
     return baseCost.toFixed(2);
   };
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: string | boolean) => {
     const newFormData = { ...formData, [field]: value };
     
-    // Auto-calculate cost when service type or document count changes
-    if (field === "serviceType" || field === "documentCount") {
+    // Auto-calculate cost when service type, document count, or label courier changes
+    if (field === "serviceType" || field === "documentCount" || field === "labelCourier") {
       newFormData.totalCost = calculateCost(
-        field === "serviceType" ? value : formData.serviceType,
-        field === "documentCount" ? value : formData.documentCount
+        field === "serviceType" ? value as string : formData.serviceType,
+        field === "documentCount" ? value as string : formData.documentCount,
+        field === "labelCourier" ? value as boolean : formData.labelCourier
       );
       
       // Adjust delivery addresses based on document count
@@ -200,6 +211,7 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
         totalCost: formData.totalCost,
         serviceType: formData.serviceType,
         documentCount: formData.documentCount,
+        labelCourier: formData.labelCourier,
         status: "pending"
       };
 
@@ -236,7 +248,8 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
         documentCount: "",
         description: "",
         pickupAddress: "",
-        totalCost: "0.00"
+        totalCost: "0.00",
+        labelCourier: false
       });
       setDeliveryAddresses([
         { id: "1", name: "", address: "", description: "" },
@@ -300,6 +313,20 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
                 placeholder="Minimum 3 documents"
               />
             </div>
+          </div>
+
+          {/* Label Courier Option */}
+          <div className="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <input
+              type="checkbox"
+              id="labelCourier"
+              checked={formData.labelCourier}
+              onChange={(e) => handleInputChange("labelCourier", e.target.checked)}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <Label htmlFor="labelCourier" className="text-sm font-medium text-blue-900 cursor-pointer">
+              Add Label Courier Service (+$11 per delivery address)
+            </Label>
           </div>
 
           {/* Description */}
@@ -405,7 +432,15 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
               <span className="text-sm text-gray-600">Delivery Addresses:</span>
               <span className="text-sm font-medium">{deliveryAddresses.filter(a => a.name.trim() && a.address.trim()).length}</span>
             </div>
-            <div className="flex items-center justify-between">
+            {formData.labelCourier && (
+              <div className="flex items-center justify-between text-blue-700 bg-blue-100 px-2 py-1 rounded">
+                <span className="text-sm font-medium">Label Courier Service:</span>
+                <span className="text-sm font-bold">
+                  +${(Math.max(deliveryAddresses.filter(a => a.name.trim() && a.address.trim()).length, parseInt(formData.documentCount) || 0) * 11).toFixed(2)}
+                </span>
+              </div>
+            )}
+            <div className="flex items-center justify-between pt-2 border-t border-gray-200">
               <span className="text-sm text-gray-600">Total Cost:</span>
               <span className="text-lg font-bold text-green-600">${formData.totalCost}</span>
             </div>
