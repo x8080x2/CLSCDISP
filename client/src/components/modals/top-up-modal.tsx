@@ -25,10 +25,10 @@ export default function TopUpModal({ isOpen, onClose, userId }: TopUpModalProps)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!amount || parseFloat(amount) <= 0) {
+    if (!amount || parseFloat(amount) < 10) {
       toast({
-        title: "Invalid Amount",
-        description: "Please enter a valid amount greater than 0",
+        title: "Invalid Amount", 
+        description: "Please enter an amount of $10 or more",
         variant: "destructive",
       });
       return;
@@ -50,7 +50,8 @@ export default function TopUpModal({ isOpen, onClose, userId }: TopUpModalProps)
       });
 
       if (!response.ok) {
-        throw new Error("Failed to top up balance");
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to top up balance");
       }
 
       // Invalidate and refetch queries
@@ -72,7 +73,7 @@ export default function TopUpModal({ isOpen, onClose, userId }: TopUpModalProps)
       console.error("Error topping up balance:", error);
       toast({
         title: "Top-Up Failed",
-        description: "Failed to update balance. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to update balance. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -96,13 +97,14 @@ export default function TopUpModal({ isOpen, onClose, userId }: TopUpModalProps)
             <Input
               id="amount"
               type="number"
-              placeholder="0.00"
+              placeholder="10.00"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              min="0"
+              min="10"
               step="0.01"
               required
             />
+            <p className="text-xs text-muted-foreground">Minimum deposit amount is $10</p>
           </div>
           
           <div className="space-y-2">

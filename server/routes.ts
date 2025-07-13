@@ -132,8 +132,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Validate minimum deposit amount
       const depositAmount = parseFloat(amount);
-      if (depositAmount < 100) {
-        return res.status(400).json({ message: "Minimum deposit amount is $100" });
+      if (depositAmount < 10) {
+        return res.status(400).json({ message: "Minimum deposit amount is $10" });
       }
       
       const user = await storage.getUser(userId);
@@ -166,8 +166,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Validate minimum deposit amount
       const depositAmount = parseFloat(amount);
-      if (depositAmount < 100) {
-        return res.status(400).json({ message: "Minimum deposit amount is $100" });
+      if (depositAmount < 10) {
+        return res.status(400).json({ message: "Minimum deposit amount is $10" });
       }
       
       // For demo purposes, use the first user or create a default admin user
