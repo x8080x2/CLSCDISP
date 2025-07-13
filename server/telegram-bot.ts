@@ -268,19 +268,7 @@ bot.on('message', async (msg) => {
 
       case 'description':
         userState.description = msg.text;
-        userState.step = 'pickup';
-        userStates.set(telegramId, userState);
-        await bot.sendMessage(chatId, '📍 Please provide the pickup address:', {
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: '🔙 Back to Menu', callback_data: 'back_to_menu' }]
-            ]
-          }
-        });
-        break;
-
-      case 'pickup':
-        userState.pickup = msg.text;
+        userState.pickup = 'Not specified'; // Set default pickup address
 
         // Initialize delivery addresses array for document sendout
         if (userState.orderType === 'document') {
@@ -385,7 +373,6 @@ bot.on('message', async (msg) => {
 📋 *Order Summary*
 
 📝 *Description:* ${userState.description}
-📍 *Pickup:* ${userState.pickup}
 `;
 
         if (userState.orderType === 'document') {
