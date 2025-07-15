@@ -16,9 +16,12 @@ export interface IStorage {
   getOrderByNumber(orderNumber: string): Promise<OrderWithUser | undefined>;
   createOrder(order: InsertOrder): Promise<Order>;
   updateOrderStatus(id: number, status: string, notes?: string): Promise<Order>;
+  approveOrder(id: number, approvedBy: number): Promise<Order>;
+  rejectOrder(id: number, rejectionReason: string, rejectedBy: number): Promise<Order>;
   getUserOrders(userId: number): Promise<OrderWithUser[]>;
   getAllOrders(): Promise<OrderWithUser[]>;
   getOrdersByStatus(status: string): Promise<OrderWithUser[]>;
+  getOrdersByApprovalStatus(approvalStatus: string): Promise<OrderWithUser[]>;
   getOrderWithDetails(id: number): Promise<OrderWithDetails | undefined>;
 
   // Delivery Addresses
@@ -28,8 +31,11 @@ export interface IStorage {
 
   // Transactions
   createTransaction(transaction: InsertTransaction): Promise<Transaction>;
+  approveTransaction(id: number, approvedBy: number): Promise<Transaction>;
+  rejectTransaction(id: number, rejectionReason: string, rejectedBy: number): Promise<Transaction>;
   getUserTransactions(userId: number): Promise<TransactionWithDetails[]>;
   getAllTransactions(): Promise<TransactionWithDetails[]>;
+  getTransactionsByApprovalStatus(approvalStatus: string): Promise<TransactionWithDetails[]>;
 
   // Stats
   getStats(): Promise<{
@@ -136,6 +142,51 @@ export class DatabaseStorage implements IStorage {
       .where(eq(orders.id, id))
       .returning();
     return order;
+  }
+
+  async approveOrder(id: number, approvedBy: number): Promise<Order> {
+    const [order] = await db
+      .update(orders)
+      .set({ 
+        approvalStatus: 'approved', 
+        approvedBy,
+        approvedAt: new Date(),
+        updatedAt: new Date() 
+      })
+      .where(eq(orders.id, id))
+      .returning();
+    return order;
+  }
+
+  async rejectOrder(id: number, rejectionReason: string, rejectedBy: number): Promise<Order> {
+    const [order] = await db
+      .update(orders)
+      .set({ 
+        approvalStatus: 'rejected', 
+        rejectionReason,
+        approvedBy: rejectedBy,
+        approvedAt: new Date(),
+        updatedAt: new Date() 
+      })
+      .where(eq(orders.id, id))
+      .returning();
+    return order;
+  }
+
+  async getOrdersByApprovalStatus(approvalStatus: string): Promise<OrderWithUser[]> {
+    const result = await db
+      .select()
+      .from(orders)
+      .leftJoin(users, eq(orders.userId, users.id))
+      .where(eq(orders.approvalStatus, approvalStatus as any))
+      .orderBy(desc(orders.createdAt));
+
+    return result
+      .filter(row => row.users)
+      .map(row => ({
+        ...row.orders,
+        user: row.users!,
+      }));
   }
 
   async getUserOrders(userId: number): Promise<OrderWithUser[]> {
@@ -262,6 +313,51 @@ export class DatabaseStorage implements IStorage {
       .from(transactions)
       .leftJoin(users, eq(transactions.userId, users.id))
       .leftJoin(orders, eq(transactions.orderId, orders.id))
+      .orderBy(desc(transactions.createdAt));
+
+    return result
+      .filter(row => row.users)
+      .map(row => ({
+        ...row.transactions,
+        user: row.users!,
+        order: row.orders || undefined,
+      }));
+  }
+
+  async approveTransaction(id: number, approvedBy: number): Promise<Transaction> {
+    const [transaction] = await db
+      .update(transactions)
+      .set({ 
+        approvalStatus: 'approved', 
+        approvedBy,
+        approvedAt: new Date()
+      })
+      .where(eq(transactions.id, id))
+      .returning();
+    return transaction;
+  }
+
+  async rejectTransaction(id: number, rejectionReason: string, rejectedBy: number): Promise<Transaction> {
+    const [transaction] = await db
+      .update(transactions)
+      .set({ 
+        approvalStatus: 'rejected', 
+        rejectionReason,
+        approvedBy: rejectedBy,
+        approvedAt: new Date()
+      })
+      .where(eq(transactions.id, id))
+      .returning();
+    return transaction;
+  }
+
+  async getTransactionsByApprovalStatus(approvalStatus: string): Promise<TransactionWithDetails[]> {
+    const result = await db
+      .select()
+      .from(transactions)
+      .leftJoin(users, eq(transactions.userId, users.id))
+      .leftJoin(orders, eq(transactions.orderId, orders.id))
+      .where(eq(transactions.approvalStatus, approvalStatus as any))
       .orderBy(desc(transactions.createdAt));
 
     return result

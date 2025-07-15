@@ -171,10 +171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      const newBalance = (parseFloat(user.balance) + depositAmount).toFixed(2);
-      const updatedUser = await storage.updateUserBalance(userId, newBalance);
-
-      // Create transaction record
+      // Create transaction record (requires approval)
       await storage.createTransaction({
         userId,
         type: 'top_up',
@@ -182,7 +179,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         description: description || `Balance top-up of $${depositAmount}`,
       });
 
-      res.json(updatedUser);
+      // Don't update balance immediately - wait for approval
+      // The balance will be updated when the transaction is approved
+      const updatedUser = await storage.getUser(userId);
+
+      res.json({ message: "Top-up request submitted for approval", user: updatedUser });
     } catch (error) {
       console.error("Error updating user balance:", error);
       res.status(500).json({ message: "Failed to update balance" });
@@ -221,10 +222,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         user = users[0];
       }
 
-      const newBalance = (parseFloat(user.balance) + depositAmount).toFixed(2);
-      const updatedUser = await storage.updateUserBalance(user.id, newBalance);
-
-      // Create transaction record
+      // Create transaction record (requires approval)
       await storage.createTransaction({
         userId: user.id,
         type: 'top_up',
@@ -232,7 +230,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         description: description || `Balance top-up of $${depositAmount}`,
       });
 
-      res.json(updatedUser);
+      // Don't update balance immediately - wait for approval
+      // The balance will be updated when the transaction is approved
+
+      res.json({ message: "Top-up request submitted for approval", user });
     } catch (error) {
       console.error("Error updating balance:", error);
       res.status(500).json({ message: "Failed to update balance" });
@@ -258,10 +259,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Orders endpoints
   app.get("/api/orders", async (req, res) => {
     try {
-      const { status } = req.query;
+      const { status, approval } = req.query;
       let orders;
       
-      if (status && status !== 'all') {
+      if (approval && approval !== 'all') {
+        orders = await storage.getOrdersByApprovalStatus(approval as string);
+      } else if (status && status !== 'all') {
         orders = await storage.getOrdersByStatus(status as string);
       } else {
         orders = await storage.getAllOrders();
@@ -271,6 +274,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching orders:", error);
       res.status(500).json({ message: "Failed to fetch orders" });
+    }
+  });
+
+  app.post("/api/orders/:id/approve", async (req, res) => {
+    try {
+      const orderId = parseInt(req.params.id);
+      const { approvedBy } = req.body;
+      
+      if (!approvedBy) {
+        return res.status(400).json({ message: "Approved by user ID is required" });
+      }
+
+      const order = await storage.approveOrder(orderId, approvedBy);
+      
+      // Find and approve the associated payment transaction
+      const orderTransactions = await storage.getAllTransactions();
+      const paymentTransaction = orderTransactions.find(t => 
+        t.orderId === orderId && t.type === 'order_payment' && t.approvalStatus === 'pending'
+      );
+      
+      if (paymentTransaction) {
+        await storage.approveTransaction(paymentTransaction.id, approvedBy);
+        
+        // Update user balance by deducting the payment amount
+        const user = await storage.getUser(paymentTransaction.userId);
+        if (user) {
+          const newBalance = (parseFloat(user.balance) + parseFloat(paymentTransaction.amount)).toFixed(2);
+          await storage.updateUserBalance(paymentTransaction.userId, newBalance);
+        }
+      }
+      
+      // Send notification to user via Telegram
+      const orderWithUser = await storage.getOrder(orderId);
+      if (orderWithUser) {
+        await sendOrderUpdate(orderWithUser.user.telegramId, orderWithUser.orderNumber, "approved");
+      }
+      
+      res.json(order);
+    } catch (error) {
+      console.error("Error approving order:", error);
+      res.status(500).json({ message: "Failed to approve order" });
+    }
+  });
+
+  app.post("/api/orders/:id/reject", async (req, res) => {
+    try {
+      const orderId = parseInt(req.params.id);
+      const { rejectionReason, rejectedBy } = req.body;
+      
+      if (!rejectionReason || !rejectedBy) {
+        return res.status(400).json({ message: "Rejection reason and rejected by user ID are required" });
+      }
+
+      const order = await storage.rejectOrder(orderId, rejectionReason, rejectedBy);
+      
+      // Send notification to user via Telegram
+      const orderWithUser = await storage.getOrder(orderId);
+      if (orderWithUser) {
+        await sendOrderUpdate(orderWithUser.user.telegramId, orderWithUser.orderNumber, "rejected", rejectionReason);
+      }
+      
+      res.json(order);
+    } catch (error) {
+      console.error("Error rejecting order:", error);
+      res.status(500).json({ message: "Failed to reject order" });
     }
   });
 
@@ -303,11 +371,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Verify balance
+      // Verify balance including pending transactions
       const totalCost = parseFloat(validatedOrderData.totalCost);
-      if (parseFloat(user.balance) < totalCost) {
+      
+      // Get user's pending transactions to calculate effective balance
+      const userTransactions = await storage.getUserTransactions(validatedOrderData.userId);
+      const pendingTransactions = userTransactions.filter(t => t.approvalStatus === 'pending');
+      const pendingAmount = pendingTransactions.reduce((sum, t) => sum + parseFloat(t.amount), 0);
+      const effectiveBalance = parseFloat(user.balance) + pendingAmount;
+      
+      if (effectiveBalance < totalCost) {
         return res.status(400).json({ 
-          message: `Insufficient balance. Required: $${totalCost}, Available: $${user.balance}` 
+          message: `Insufficient balance. Required: $${totalCost}, Available: $${effectiveBalance.toFixed(2)} (including pending transactions)` 
         });
       }
 
@@ -338,7 +413,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Create transaction
+      // Create transaction (requires approval)
       await storage.createTransaction({
         userId: validatedOrderData.userId,
         orderId: order.id,
@@ -347,9 +422,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         description: `Payment for order ${order.orderNumber}`,
       });
 
-      // Update user balance
-      const newBalance = (parseFloat(user.balance) - totalCost).toFixed(2);
-      await storage.updateUserBalance(validatedOrderData.userId, newBalance);
+      // Don't update balance immediately - wait for approval
+      // The balance will be updated when the order is approved
 
       // Send notification to user if Telegram bot is enabled
       if (user.telegramId) {
@@ -423,10 +497,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Transactions endpoints
   app.get("/api/transactions", async (req, res) => {
     try {
-      const { userId } = req.query;
+      const { userId, approval } = req.query;
       let transactions;
       
-      if (userId) {
+      if (approval && approval !== 'all') {
+        transactions = await storage.getTransactionsByApprovalStatus(approval as string);
+      } else if (userId) {
         transactions = await storage.getUserTransactions(parseInt(userId as string));
       } else {
         transactions = await storage.getAllTransactions();
@@ -436,6 +512,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching transactions:", error);
       res.status(500).json({ message: "Failed to fetch transactions" });
+    }
+  });
+
+  app.post("/api/transactions/:id/approve", async (req, res) => {
+    try {
+      const transactionId = parseInt(req.params.id);
+      const { approvedBy } = req.body;
+      
+      if (!approvedBy) {
+        return res.status(400).json({ message: "Approved by user ID is required" });
+      }
+
+      const transaction = await storage.approveTransaction(transactionId, approvedBy);
+      
+      // If it's a top-up transaction, update user balance
+      if (transaction.type === 'top_up') {
+        const user = await storage.getUser(transaction.userId);
+        if (user) {
+          const newBalance = (parseFloat(user.balance) + parseFloat(transaction.amount)).toFixed(2);
+          await storage.updateUserBalance(transaction.userId, newBalance);
+        }
+      }
+      
+      res.json(transaction);
+    } catch (error) {
+      console.error("Error approving transaction:", error);
+      res.status(500).json({ message: "Failed to approve transaction" });
+    }
+  });
+
+  app.post("/api/transactions/:id/reject", async (req, res) => {
+    try {
+      const transactionId = parseInt(req.params.id);
+      const { rejectionReason, rejectedBy } = req.body;
+      
+      if (!rejectionReason || !rejectedBy) {
+        return res.status(400).json({ message: "Rejection reason and rejected by user ID are required" });
+      }
+
+      const transaction = await storage.rejectTransaction(transactionId, rejectionReason, rejectedBy);
+      res.json(transaction);
+    } catch (error) {
+      console.error("Error rejecting transaction:", error);
+      res.status(500).json({ message: "Failed to reject transaction" });
     }
   });
 

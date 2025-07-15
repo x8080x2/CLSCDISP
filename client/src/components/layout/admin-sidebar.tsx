@@ -8,7 +8,8 @@ import {
   Send,
   Plus,
   Mail,
-  Shield
+  Shield,
+  CheckCircle
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ const navigation = [
   { name: "Orders", href: "/admin/orders", icon: Package },
   { name: "Users", href: "/admin/users", icon: UsersIcon },
   { name: "Transactions", href: "/admin/transactions", icon: CreditCard },
+  { name: "Approvals", href: "/admin/approvals", icon: CheckCircle },
 ];
 
 export default function AdminSidebar() {

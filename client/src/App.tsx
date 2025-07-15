@@ -14,6 +14,7 @@ import AdminDashboard from "./pages/admin-dashboard";
 import AdminOrders from "./pages/admin-orders";
 import AdminUsers from "./pages/admin-users";
 import AdminTransactions from "./pages/admin-transactions";
+import AdminApprovals from "./pages/admin-approvals";
 
 import NotFound from "./pages/not-found";
 import { queryClient } from "./lib/queryClient";
@@ -62,6 +63,15 @@ function App() {
                 <AdminSidebar />
                 <main className="flex-1 overflow-y-auto">
                   <AdminTransactions />
+                </main>
+              </div>
+            </Route>
+            
+            <Route path="/admin/approvals">
+              <div className="flex h-screen bg-gray-50">
+                <AdminSidebar />
+                <main className="flex-1 overflow-y-auto">
+                  <AdminApprovals />
                 </main>
               </div>
             </Route>
