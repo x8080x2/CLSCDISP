@@ -1289,3 +1289,59 @@ export async function sendOrderFilesToAdmins(orderDetails: any, deliveryAddresse
     console.error('Error sending order files to admins:', error);
   }
 }
+
+// Function to send transaction notifications to all admins
+export async function sendTransactionToAdmins(transaction: any) {
+  if (!bot || ADMIN_IDS.length === 0) {
+    console.log('Telegram bot not available or no admin IDs configured - transaction notification not sent');
+    return;
+  }
+
+  const statusIcon = transaction.type === 'top_up' ? '💰' : '💸';
+  const typeText = transaction.type === 'top_up' ? 'Top-up Request' : 'Payment Transaction';
+  
+  const message = `🔔 *New ${typeText}*\n\n` +
+    `${statusIcon} *Type:* ${transaction.type.replace('_', ' ').toUpperCase()}\n` +
+    `💵 *Amount:* $${transaction.amount}\n` +
+    `👤 *User:* ${transaction.user?.firstName} ${transaction.user?.lastName} (@${transaction.user?.username})\n` +
+    `📝 *Description:* ${transaction.description}\n` +
+    `📅 *Date:* ${new Date(transaction.createdAt).toLocaleString()}\n` +
+    `⏳ *Status:* ${transaction.approvalStatus.toUpperCase()}\n\n` +
+    `Please review and approve/reject this transaction in the admin panel.`;
+
+  for (const adminId of ADMIN_IDS) {
+    try {
+      await bot.sendMessage(adminId, message, { parse_mode: 'Markdown' });
+    } catch (error) {
+      console.error(`Error sending transaction notification to admin ${adminId}:`, error);
+    }
+  }
+}
+
+// Function to send order notifications to all admins
+export async function sendOrderToAdmins(order: any) {
+  if (!bot || ADMIN_IDS.length === 0) {
+    console.log('Telegram bot not available or no admin IDs configured - order notification not sent');
+    return;
+  }
+
+  const message = `🔔 *New Order Created*\n\n` +
+    `📦 *Order:* ${order.orderNumber}\n` +
+    `👤 *Customer:* ${order.user?.firstName} ${order.user?.lastName} (@${order.user?.username})\n` +
+    `🚚 *Service:* ${order.serviceType.replace('_', ' ').toUpperCase()}\n` +
+    `💰 *Total Cost:* $${order.totalCost}\n` +
+    `📍 *Pickup:* ${order.pickupAddress}\n` +
+    `📍 *Delivery:* ${order.deliveryAddress}\n` +
+    `📝 *Description:* ${order.description}\n` +
+    `📅 *Date:* ${new Date(order.createdAt).toLocaleString()}\n` +
+    `⏳ *Status:* ${order.approvalStatus.toUpperCase()}\n\n` +
+    `Please review and approve/reject this order in the admin panel.`;
+
+  for (const adminId of ADMIN_IDS) {
+    try {
+      await bot.sendMessage(adminId, message, { parse_mode: 'Markdown' });
+    } catch (error) {
+      console.error(`Error sending order notification to admin ${adminId}:`, error);
+    }
+  }
+}

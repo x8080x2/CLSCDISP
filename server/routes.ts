@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { cryptoService } from "./crypto-service";
 import { insertOrderSchema, insertTransactionSchema, insertDeliveryAddressSchema } from "@shared/schema";
-import { sendOrderUpdate, sendNewOrderToAdmins, sendOrderFilesToAdmins } from "./telegram-bot";
+import { sendOrderUpdate, sendNewOrderToAdmins, sendOrderFilesToAdmins, sendTransactionToAdmins, sendOrderToAdmins } from "./telegram-bot";
 import { z } from "zod";
 import multer from "multer";
 import path from "path";
@@ -172,12 +172,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Create transaction record (requires approval)
-      await storage.createTransaction({
+      const transaction = await storage.createTransaction({
         userId,
         type: 'top_up',
         amount: depositAmount.toString(),
         description: description || `Balance top-up of $${depositAmount}`,
       });
+
+      // Send notification to admin
+      const transactionWithUser = await storage.getUserTransactions(userId);
+      const newTransaction = transactionWithUser.find(t => t.id === transaction.id);
+      if (newTransaction) {
+        await sendTransactionToAdmins(newTransaction);
+      }
 
       // Don't update balance immediately - wait for approval
       // The balance will be updated when the transaction is approved
@@ -223,12 +230,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Create transaction record (requires approval)
-      await storage.createTransaction({
+      const transaction = await storage.createTransaction({
         userId: user.id,
         type: 'top_up',
         amount: depositAmount.toString(),
         description: description || `Balance top-up of $${depositAmount}`,
       });
+
+      // Send notification to admin
+      const transactionWithUser = await storage.getUserTransactions(user.id);
+      const newTransaction = transactionWithUser.find(t => t.id === transaction.id);
+      if (newTransaction) {
+        await sendTransactionToAdmins(newTransaction);
+      }
 
       // Don't update balance immediately - wait for approval
       // The balance will be updated when the transaction is approved
@@ -414,7 +428,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Create transaction (requires approval)
-      await storage.createTransaction({
+      const transaction = await storage.createTransaction({
         userId: validatedOrderData.userId,
         orderId: order.id,
         type: 'order_payment',
@@ -445,7 +459,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Send notifications to admins
       try {
-        await sendNewOrderToAdmins(orderWithDetails);
+        // Send order notification
+        await sendOrderToAdmins(orderWithDetails);
+        
+        // Send transaction notification
+        const transactionWithUser = await storage.getUserTransactions(validatedOrderData.userId);
+        const newTransaction = transactionWithUser.find(t => t.id === transaction.id);
+        if (newTransaction) {
+          await sendTransactionToAdmins(newTransaction);
+        }
         
         // Send files to admins if there are any
         if (orderWithDetails.deliveryAddresses && orderWithDetails.deliveryAddresses.length > 0) {
