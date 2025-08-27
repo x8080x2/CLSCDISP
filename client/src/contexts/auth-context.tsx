@@ -18,6 +18,8 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   signOut: () => Promise<void>;
+  signin: (data: any) => Promise<any>;
+  signup: (data: any) => Promise<any>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -54,14 +56,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signin = async (data: SignInData) => {
+  const signin = async (data: any) => {
     try {
-      const response = await apiRequest('/auth/signin', 'POST', data);
+      const response = await apiRequest('/api/auth/signin', 'POST', data);
       console.log('Signin response:', response);
 
       // After successful signin, fetch user data
-      const userResponse = await refetch();
-      console.log('User refetch result:', userResponse);
+      await refetch();
       return response;
     } catch (error) {
       console.error('Signin error:', error);
@@ -69,14 +70,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signup = async (data: SignUpData) => {
+  const signup = async (data: any) => {
     try {
-      const response = await apiRequest('/auth/signup', 'POST', data);
+      const response = await apiRequest('/api/auth/signup', 'POST', data);
       console.log('Signup response:', response);
 
       // After successful signup, fetch user data
-      const userResponse = await refetch();
-      console.log('User refetch result after signup:', userResponse);
+      await refetch();
       return response;
     } catch (error) {
       console.error('Signup error:', error);
@@ -93,6 +93,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isLoading,
       isAuthenticated,
       signOut,
+      signin,
+      signup,
     }}>
       {children}
     </AuthContext.Provider>

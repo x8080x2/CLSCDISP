@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { signInSchema, type SignInData } from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/contexts/auth-context";
 
 interface SignInFormProps {
   onSuccess?: () => void;
@@ -17,7 +17,7 @@ interface SignInFormProps {
 
 export function SignInForm({ onSuccess, onSwitchToSignUp }: SignInFormProps) {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const { signin } = useAuth();
   
   const form = useForm<SignInData>({
     resolver: zodResolver(signInSchema),
@@ -28,15 +28,12 @@ export function SignInForm({ onSuccess, onSwitchToSignUp }: SignInFormProps) {
   });
 
   const signInMutation = useMutation({
-    mutationFn: async (data: SignInData) => {
-      return await apiRequest('/api/auth/signin', 'POST', data);
-    },
+    mutationFn: signin,
     onSuccess: (response) => {
       toast({
         title: "Success",
         description: "You have been signed in successfully.",
       });
-      queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
       onSuccess?.();
     },
     onError: (error: any) => {
