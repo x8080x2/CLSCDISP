@@ -18,6 +18,7 @@ export const users = pgTable("users", {
   lastName: text("last_name"),
   balance: decimal("balance", { precision: 10, scale: 2 }).notNull().default("0.00"),
   isActive: boolean("is_active").notNull().default(true),
+  isAdmin: boolean("is_admin").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

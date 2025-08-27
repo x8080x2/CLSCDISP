@@ -11,6 +11,7 @@ export interface SessionUser {
   email: string;
   firstName?: string;
   lastName?: string;
+  isAdmin?: boolean;
 }
 
 // Extend Express Request to include user session
