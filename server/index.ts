@@ -15,7 +15,7 @@ app.use(express.urlencoded({ extended: false }));
 // CORS configuration
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? process.env.FRONTEND_URL || 'https://your-app.replit.app'
+    ? [process.env.FRONTEND_URL, process.env.RENDER_EXTERNAL_URL].filter(Boolean)
     : ['http://localhost:5000', 'http://127.0.0.1:5000', 'http://localhost:5173', 'http://127.0.0.1:5173'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -34,10 +34,10 @@ app.use(session({
   rolling: true,
   name: 'connect.sid',
   cookie: {
-    secure: false, // Set to true if using HTTPS
+    secure: process.env.NODE_ENV === 'production', // True for HTTPS in production
     httpOnly: true, // Back to true for security
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    sameSite: 'none', // Changed to none for cross-origin
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     path: '/' // Explicitly set path
   },
 }));
