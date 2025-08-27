@@ -25,7 +25,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
 
-  const { data: user, isLoading, error } = useQuery({
+  const { data: user, isLoading, error, refetch } = useQuery({
     queryKey: ['/api/auth/me'],
     queryFn: async () => {
       try {
@@ -53,6 +53,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       window.location.href = '/auth';
     }
   };
+
+  const signin = async (data: SignInData) => {
+    try {
+      const response = await apiRequest('/auth/signin', 'POST', data);
+      console.log('Signin response:', response);
+
+      // After successful signin, fetch user data
+      const userResponse = await refetch();
+      console.log('User refetch result:', userResponse);
+      return response;
+    } catch (error) {
+      console.error('Signin error:', error);
+      throw error;
+    }
+  };
+
+  const signup = async (data: SignUpData) => {
+    try {
+      const response = await apiRequest('/auth/signup', 'POST', data);
+      console.log('Signup response:', response);
+
+      // After successful signup, fetch user data
+      const userResponse = await refetch();
+      console.log('User refetch result after signup:', userResponse);
+      return response;
+    } catch (error) {
+      console.error('Signup error:', error);
+      throw error;
+    }
+  };
+
 
   const isAuthenticated = !!user;
 
