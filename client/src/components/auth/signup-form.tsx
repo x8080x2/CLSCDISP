@@ -52,7 +52,7 @@ export function SignUpForm({ onSuccess, onSwitchToSignIn }: SignUpFormProps) {
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto" data-testid="signup-form">
+    <Card className="w-full max-w-md mx-auto bg-white/95 backdrop-blur-sm border-white/20 shadow-2xl" data-testid="signup-form">
       <CardHeader className="space-y-1">
         <CardTitle className="text-2xl text-center">Create Account</CardTitle>
         <CardDescription className="text-center">
