@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "./contexts/auth-context";
 import { AuthGuard } from "./components/auth/auth-guard";
+import { AdminGuard } from "./components/AdminGuard";
 import AuthPage from "./pages/auth";
 
 // Customer Interface
@@ -50,58 +51,58 @@ function App() {
             
               {/* Admin Routes */}
               <Route path="/admin">
-                <AuthGuard>
+                <AdminGuard>
                   <div className="flex h-screen bg-gray-50">
                     <AdminSidebar />
                     <main className="flex-1 overflow-y-auto">
                       <AdminDashboard />
                     </main>
                   </div>
-                </AuthGuard>
+                </AdminGuard>
               </Route>
             
               <Route path="/admin/orders">
-                <AuthGuard>
+                <AdminGuard>
                   <div className="flex h-screen bg-gray-50">
                     <AdminSidebar />
                     <main className="flex-1 overflow-y-auto">
                       <AdminOrders />
                     </main>
                   </div>
-                </AuthGuard>
+                </AdminGuard>
               </Route>
               
               <Route path="/admin/users">
-                <AuthGuard>
+                <AdminGuard>
                   <div className="flex h-screen bg-gray-50">
                     <AdminSidebar />
                     <main className="flex-1 overflow-y-auto">
                       <AdminUsers />
                     </main>
                   </div>
-                </AuthGuard>
+                </AdminGuard>
               </Route>
               
               <Route path="/admin/transactions">
-                <AuthGuard>
+                <AdminGuard>
                   <div className="flex h-screen bg-gray-50">
                     <AdminSidebar />
                     <main className="flex-1 overflow-y-auto">
                       <AdminTransactions />
                     </main>
                   </div>
-                </AuthGuard>
+                </AdminGuard>
               </Route>
               
               <Route path="/admin/approvals">
-                <AuthGuard>
+                <AdminGuard>
                   <div className="flex h-screen bg-gray-50">
                     <AdminSidebar />
                     <main className="flex-1 overflow-y-auto">
                       <AdminApprovals />
                     </main>
                   </div>
-                </AuthGuard>
+                </AdminGuard>
               </Route>
             
               <Route component={NotFound} />

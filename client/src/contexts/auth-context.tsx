@@ -10,6 +10,7 @@ interface User {
   lastName?: string;
   balance: string;
   isActive: boolean;
+  isAdmin?: boolean;
   createdAt: string;
 }
 

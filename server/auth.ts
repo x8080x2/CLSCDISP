@@ -58,6 +58,7 @@ export function setupAuth(app: Express) {
         email: newUser.email!,
         firstName: newUser.firstName || undefined,
         lastName: newUser.lastName || undefined,
+        isAdmin: newUser.isAdmin || false,
       };
 
       res.json({
@@ -107,6 +108,7 @@ export function setupAuth(app: Express) {
         email: user.email!,
         firstName: user.firstName || undefined,
         lastName: user.lastName || undefined,
+        isAdmin: user.isAdmin || false,
       };
 
       // Force session save and send response only after save completes
@@ -181,6 +183,7 @@ export function setupAuth(app: Express) {
         lastName: user.lastName,
         balance: user.balance,
         isActive: user.isActive,
+        isAdmin: user.isAdmin,
         createdAt: user.createdAt,
       });
     } catch (error) {
@@ -201,5 +204,16 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
 // Optional auth middleware (for endpoints that work with or without auth)
 export function optionalAuth(req: Request, res: Response, next: NextFunction) {
   // Always proceed, but req.session.user will be undefined if not authenticated
+  next();
+}
+
+// Admin middleware
+export function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  if (!req.session.user) {
+    return res.status(401).json({ message: 'Not authenticated' });
+  }
+  if (!req.session.user.isAdmin) {
+    return res.status(403).json({ message: 'Admin access required' });
+  }
   next();
 }
