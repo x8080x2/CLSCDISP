@@ -410,8 +410,8 @@ bot.on('message', async (msg) => {
 
         if (userState.orderType === 'document') {
           baseCost = userState.documentCount * SERVICE_PRICES.document.pricePerDocument;
-        } else {
-          baseCost = SERVICE_PRICES[serviceType as keyof typeof SERVICE_PRICES].base;
+        } else if (userState.orderType === 'shipping_label') {
+          baseCost = SERVICE_PRICES.shipping_label.price;
         }
 
         const distanceFee = Math.floor(Math.random() * 10) + 5;
@@ -789,7 +789,7 @@ Your order is now pending and will be processed soon!`;
             await sendNewOrderToAdmins(orderWithDetails);
 
             // Send files to admins if there are any
-            if (orderWithDetails.deliveryAddresses && orderWithDetails.deliveryAddresses.length > 0) {
+            if (orderWithDetails && orderWithDetails.deliveryAddresses && orderWithDetails.deliveryAddresses.length > 0) {
               await sendOrderFilesToAdmins(orderWithDetails, orderWithDetails.deliveryAddresses);
             }
           } catch (notifyError) {

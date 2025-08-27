@@ -371,6 +371,7 @@ export class DatabaseStorage implements IStorage {
 
   async getStats(): Promise<{
     totalOrders: number;
+    activeUsers: number;
     totalRevenue: string;
     pendingOrders: number;
   }> {
@@ -388,8 +389,14 @@ export class DatabaseStorage implements IStorage {
       .from(orders)
       .where(eq(orders.status, 'pending'));
 
+    const [activeUsersResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(users)
+      .where(eq(users.isActive, true));
+
     return {
       totalOrders: totalOrdersResult.count,
+      activeUsers: activeUsersResult.count,
       totalRevenue: totalRevenueResult.total || "0.00",
       pendingOrders: pendingOrdersResult.count,
     };
