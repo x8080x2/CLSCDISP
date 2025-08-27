@@ -1,71 +1,67 @@
-import { pgTable, text, serial, integer, boolean, timestamp, decimal, pgEnum } from "drizzle-orm/pg-core";
+import { sqliteTable, text, integer, real, text as textEnum } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 
-export const orderStatusEnum = pgEnum('order_status', ['pending', 'in_progress', 'completed', 'cancelled']);
-export const transactionTypeEnum = pgEnum('transaction_type', ['top_up', 'order_payment', 'refund']);
-export const serviceTypeEnum = pgEnum('service_type', ['standard', 'express', 'same_day']);
-export const approvalStatusEnum = pgEnum('approval_status', ['pending', 'approved', 'rejected']);
-
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
+export const users = sqliteTable("users", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   telegramId: text("telegram_id").unique(), // Made optional for web-only users
   username: text("username").notNull(),
   email: text("email").unique(), // For web login
   password: text("password"), // Hashed password for web login
   firstName: text("first_name"),
   lastName: text("last_name"),
-  balance: decimal("balance", { precision: 10, scale: 2 }).notNull().default("0.00"),
-  isActive: boolean("is_active").notNull().default(true),
-  isAdmin: boolean("is_admin").notNull().default(false),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  balance: real("balance").notNull().default(0.00),
+  isActive: integer("is_active", { mode: 'boolean' }).notNull().default(true),
+  isAdmin: integer("is_admin", { mode: 'boolean' }).notNull().default(false),
+  createdAt: integer("created_at", { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
 });
 
-export const orders = pgTable("orders", {
-  id: serial("id").primaryKey(),
+export const orders = sqliteTable("orders", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("user_id").notNull().references(() => users.id),
   orderNumber: text("order_number").notNull().unique(),
   description: text("description").notNull(),
   pickupAddress: text("pickup_address").notNull(),
   deliveryAddress: text("delivery_address").notNull(),
-  serviceType: serviceTypeEnum("service_type").notNull(),
-  baseCost: decimal("base_cost", { precision: 10, scale: 2 }).notNull(),
-  distanceFee: decimal("distance_fee", { precision: 10, scale: 2 }).notNull().default("0.00"),
-  totalCost: decimal("total_cost", { precision: 10, scale: 2 }).notNull(),
-  status: orderStatusEnum("status").notNull().default("pending"),
-  approvalStatus: approvalStatusEnum("approval_status").notNull().default("pending"),
+  serviceType: text("service_type", { enum: ['standard', 'express', 'same_day'] }).notNull(),
+  baseCost: real("base_cost").notNull(),
+  distanceFee: real("distance_fee").notNull().default(0.00),
+  totalCost: real("total_cost").notNull(),
+  status: text("status", { enum: ['pending', 'in_progress', 'completed', 'cancelled'] }).notNull().default('pending'),
+  approvalStatus: text("approval_status", { enum: ['pending', 'approved', 'rejected'] }).notNull().default('pending'),
   approvedBy: integer("approved_by").references(() => users.id),
-  approvedAt: timestamp("approved_at"),
+  approvedAt: integer("approved_at", { mode: 'timestamp' }),
   rejectionReason: text("rejection_reason"),
   specialInstructions: text("special_instructions"),
   notes: text("notes"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  createdAt: integer("created_at", { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer("updated_at", { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
 });
 
-export const deliveryAddresses = pgTable("delivery_addresses", {
-  id: serial("id").primaryKey(),
+export const deliveryAddresses = sqliteTable("delivery_addresses", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   orderId: integer("order_id").notNull().references(() => orders.id),
   name: text("name").notNull(),
   address: text("address").notNull(),
   description: text("description"),
-  attachedFiles: text("attached_files").array(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  attachedFiles: text("attached_files"), // JSON string for array storage
+  createdAt: integer("created_at", { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
 });
 
-export const transactions = pgTable("transactions", {
-  id: serial("id").primaryKey(),
+export const transactions = sqliteTable("transactions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("user_id").notNull().references(() => users.id),
   orderId: integer("order_id").references(() => orders.id),
-  type: transactionTypeEnum("type").notNull(),
-  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  type: text("type", { enum: ['top_up', 'order_payment', 'refund'] }).notNull(),
+  amount: real("amount").notNull(),
   description: text("description").notNull(),
-  approvalStatus: approvalStatusEnum("approval_status").notNull().default("pending"),
+  approvalStatus: text("approval_status", { enum: ['pending', 'approved', 'rejected'] }).notNull().default('pending'),
   approvedBy: integer("approved_by").references(() => users.id),
-  approvedAt: timestamp("approved_at"),
+  approvedAt: integer("approved_at", { mode: 'timestamp' }),
   rejectionReason: text("rejection_reason"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  createdAt: integer("created_at", { mode: 'timestamp' }).notNull().default(sql`(unixepoch())`),
 });
 
 export const usersRelations = relations(users, ({ many }) => ({

@@ -1,25 +1,22 @@
-import { drizzle } from 'drizzle-orm/node-postgres';
-import { Pool } from 'pg';
+import { drizzle } from 'drizzle-orm/better-sqlite3';
+import Database from 'better-sqlite3';
 import * as schema from "@shared/schema";
+import { mkdirSync } from 'fs';
+import { dirname } from 'path';
 
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
+const dbPath = './database.sqlite';
+
+// Ensure the directory exists
+try {
+  mkdirSync(dirname(dbPath), { recursive: true });
+} catch (error) {
+  // Directory already exists or other error, continue
 }
 
-// Configure connection pool for Replit PostgreSQL
-export const pool = new Pool({ 
-  connectionString: process.env.DATABASE_URL,
-  max: 10,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
-  ssl: false, // Disable SSL for Replit environment
-});
+// Create SQLite database connection
+const sqlite = new Database(dbPath);
 
-// Add connection error handling
-pool.on('error', (err) => {
-  console.error('Database connection error:', err);
-});
+// Enable foreign keys
+sqlite.pragma('foreign_keys = ON');
 
-export const db = drizzle(pool, { schema });
+export const db = drizzle(sqlite, { schema });

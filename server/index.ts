@@ -1,8 +1,7 @@
 import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
-import ConnectPgSimple from "connect-pg-simple";
-import { pool } from "./db";
+import MemoryStore from "memorystore";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./auth";
@@ -23,12 +22,11 @@ app.use(cors({
   credentials: true, // Allow credentials (cookies) to be sent
 }));
 
-// Session configuration
-const PgSession = ConnectPgSimple(session);
+// Session configuration with MemoryStore for simplicity
+const MemStore = MemoryStore(session);
 app.use(session({
-  store: new PgSession({
-    pool,
-    tableName: 'session'
+  store: new MemStore({
+    checkPeriod: 86400000, // prune expired entries every 24h
   }),
   secret: process.env.SESSION_SECRET || 'your-super-secret-session-key-change-in-production',
   resave: false,
