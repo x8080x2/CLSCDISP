@@ -29,7 +29,7 @@ export default function AuthPage() {
     >
       {/* Dark overlay for better readability */}
       <div className="absolute inset-0 bg-black bg-opacity-50"></div>
-      <div className="w-full max-w-md space-y-8 relative z-10"></div>
+      <div className="w-full max-w-md space-y-8 relative z-10">
         {isSignUp ? (
           <SignUpForm
             onSuccess={handleAuthSuccess}
