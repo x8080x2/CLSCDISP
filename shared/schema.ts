@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real, text as textEnum } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -144,7 +144,9 @@ export type Order = typeof orders.$inferSelect;
 export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
 export type Transaction = typeof transactions.$inferSelect;
 export type InsertDeliveryAddress = z.infer<typeof insertDeliveryAddressSchema>;
-export type DeliveryAddress = typeof deliveryAddresses.$inferSelect;
+export type DeliveryAddress = typeof deliveryAddresses.$inferSelect & {
+  attachedFiles?: string[] | null;
+};
 
 export type OrderWithUser = Order & { user: User };
 export type OrderWithDetails = Order & { user: User; deliveryAddresses: DeliveryAddress[] };

@@ -263,28 +263,54 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async createDeliveryAddress(address: InsertDeliveryAddress): Promise<DeliveryAddress> {
+  async createDeliveryAddress(insertDeliveryAddress: InsertDeliveryAddress): Promise<DeliveryAddress> {
+    // Handle attachedFiles array serialization
+    const processedAddress = {
+      ...insertDeliveryAddress,
+      attachedFiles: insertDeliveryAddress.attachedFiles 
+        ? JSON.stringify(insertDeliveryAddress.attachedFiles)
+        : null
+    };
+
     const [deliveryAddress] = await db
       .insert(deliveryAddresses)
-      .values(address)
+      .values(processedAddress)
       .returning();
-    return deliveryAddress;
+
+    // Parse attachedFiles back to array for return
+    return {
+      ...deliveryAddress,
+      attachedFiles: deliveryAddress.attachedFiles 
+        ? JSON.parse(deliveryAddress.attachedFiles)
+        : null
+    };
   }
 
   async getDeliveryAddresses(orderId: number): Promise<DeliveryAddress[]> {
-    return await db
+    const addresses = await db
       .select()
       .from(deliveryAddresses)
-      .where(eq(deliveryAddresses.orderId, orderId));
+      .where(eq(deliveryAddresses.orderId, orderId))
+      .orderBy(desc(deliveryAddresses.createdAt));
+
+    // Parse JSON strings back to arrays
+    return addresses.map(addr => ({
+      ...addr,
+      attachedFiles: addr.attachedFiles ? JSON.parse(addr.attachedFiles) : null
+    }));
   }
 
   async updateDeliveryAddressFiles(id: number, files: string[]): Promise<DeliveryAddress> {
     const [deliveryAddress] = await db
       .update(deliveryAddresses)
-      .set({ attachedFiles: files })
+      .set({ attachedFiles: JSON.stringify(files) })
       .where(eq(deliveryAddresses.id, id))
       .returning();
-    return deliveryAddress;
+    
+    return {
+      ...deliveryAddress,
+      attachedFiles: JSON.parse(deliveryAddress.attachedFiles)
+    };
   }
 
   async createTransaction(insertTransaction: InsertTransaction): Promise<Transaction> {
