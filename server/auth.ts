@@ -32,7 +32,7 @@ export function setupAuth(app: Express) {
   app.post('/api/auth/signup', async (req: Request, res: Response) => {
     try {
       const validatedData: SignUpData = signUpSchema.parse(req.body);
-      
+
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(validatedData.email);
       if (existingUser) {
@@ -94,7 +94,7 @@ export function setupAuth(app: Express) {
   app.post('/api/auth/signin', async (req: Request, res: Response) => {
     try {
       const validatedData: SignInData = signInSchema.parse(req.body);
-      
+
       // Find user by email
       const user = await storage.getUserByEmail(validatedData.email);
       if (!user || !user.password) {
@@ -123,9 +123,9 @@ export function setupAuth(app: Express) {
           console.error('Session save error:', err);
           return res.status(500).json({ message: 'Failed to save session' });
         }
-        
+
         console.log('Session saved successfully for user:', user.email);
-        
+
         res.json({
           message: 'Signed in successfully',
           user: {
@@ -177,7 +177,7 @@ export function setupAuth(app: Express) {
   app.post('/api/auth/admin/verify-code', async (req: Request, res: Response) => {
     try {
       const { code } = req.body;
-      
+
       if (!code || typeof code !== 'string') {
         return res.status(400).json({ message: 'Admin code is required' });
       }
@@ -189,14 +189,14 @@ export function setupAuth(app: Express) {
 
       // Set admin session
       setAdminSession(req, code);
-      
+
       // Force session save
       req.session.save((err) => {
         if (err) {
           console.error('Session save error:', err);
           return res.status(500).json({ message: 'Failed to save admin session' });
         }
-        
+
         res.json({ 
           message: 'Admin access granted',
           expiresAt: req.session.adminCode?.expiresAt
@@ -212,7 +212,7 @@ export function setupAuth(app: Express) {
   app.get('/api/auth/admin/status', async (req: Request, res: Response) => {
     try {
       const adminCodeSession = req.session.adminCode;
-      
+
       if (!adminCodeSession || Date.now() > adminCodeSession.expiresAt) {
         return res.status(401).json({ 
           message: 'Admin access required',
@@ -235,7 +235,7 @@ export function setupAuth(app: Express) {
   app.post('/api/auth/change-email', requireAuth, async (req: Request, res: Response) => {
     try {
       const { newEmail, password } = req.body;
-      
+
       if (!newEmail || !password) {
         return res.status(400).json({ message: 'New email and current password are required' });
       }
@@ -275,7 +275,7 @@ export function setupAuth(app: Express) {
   app.post('/api/auth/change-password', requireAuth, async (req: Request, res: Response) => {
     try {
       const { currentPassword, newPassword } = req.body;
-      
+
       if (!currentPassword || !newPassword) {
         return res.status(400).json({ message: 'Current password and new password are required' });
       }
@@ -312,33 +312,34 @@ export function setupAuth(app: Express) {
   // Get current user route
   app.get('/api/auth/me', async (req: Request, res: Response) => {
     try {
-      console.log('Headers:', req.headers.cookie);
-      console.log('Session ID:', req.sessionID);
-      console.log('Session user:', req.session.user);
-      console.log('Session data:', req.session);
-      
-      if (!req.session.user) {
-        return res.status(401).json({ message: 'Not authenticated' });
-      }
+      console.log('Auth/me - Session ID:', req.sessionID);
+      console.log('Auth/me - Session user:', req.session?.user);
+      console.log('Auth/me - Full session:', JSON.stringify(req.session, null, 2));
 
-      // Get fresh user data from database
-      const user = await storage.getUser(req.session.user.id);
-      if (!user) {
-        req.session.destroy(() => {});
-        return res.status(401).json({ message: 'User not found' });
-      }
+      if (req.session?.user) {
+        console.log('Auth/me - User authenticated:', req.session.user.email);
+        // Get fresh user data from database
+        const user = await storage.getUser(req.session.user.id);
+        if (!user) {
+          req.session.destroy(() => {});
+          return res.status(401).json({ message: 'User not found' });
+        }
 
-      res.json({
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        balance: user.balance,
-        isActive: user.isActive,
-        isAdmin: user.isAdmin,
-        createdAt: user.createdAt,
-      });
+        res.json({
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          balance: user.balance,
+          isActive: user.isActive,
+          isAdmin: user.isAdmin,
+          createdAt: user.createdAt,
+        });
+      } else {
+        console.log('Auth/me - No user in session');
+        res.status(401).json({ message: 'Not authenticated' });
+      }
     } catch (error) {
       console.error('Get current user error:', error);
       res.status(500).json({ message: 'Failed to get user data' });

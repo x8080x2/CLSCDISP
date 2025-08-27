@@ -1,7 +1,8 @@
 import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
-import MemoryStore from "memorystore";
+import fs from "fs";
+import path from "path";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./auth";
@@ -22,23 +23,74 @@ app.use(cors({
   credentials: true, // Allow credentials (cookies) to be sent
 }));
 
-// Session configuration with MemoryStore for simplicity
-const MemStore = MemoryStore(session);
+// Ensure sessions directory exists
+const sessionsDir = path.join(process.cwd(), 'sessions');
+if (!fs.existsSync(sessionsDir)) {
+  fs.mkdirSync(sessionsDir, { recursive: true });
+}
+
+// File-based session store for persistence
+class FileStore extends session.Store {
+  constructor() {
+    super();
+  }
+
+  get(sid: string, callback: (err?: any, session?: any) => void) {
+    try {
+      const filePath = path.join(sessionsDir, `${sid}.json`);
+      if (fs.existsSync(filePath)) {
+        const data = fs.readFileSync(filePath, 'utf8');
+        const session = JSON.parse(data);
+        if (session.expires && new Date(session.expires) <= new Date()) {
+          this.destroy(sid, callback);
+          return;
+        }
+        callback(null, session);
+      } else {
+        callback();
+      }
+    } catch (err) {
+      callback(err);
+    }
+  }
+
+  set(sid: string, session: any, callback?: (err?: any) => void) {
+    try {
+      const filePath = path.join(sessionsDir, `${sid}.json`);
+      fs.writeFileSync(filePath, JSON.stringify(session));
+      callback && callback();
+    } catch (err) {
+      callback && callback(err);
+    }
+  }
+
+  destroy(sid: string, callback?: (err?: any) => void) {
+    try {
+      const filePath = path.join(sessionsDir, `${sid}.json`);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+      callback && callback();
+    } catch (err) {
+      callback && callback(err);
+    }
+  }
+}
+
+// Session configuration with file-based storage
 app.use(session({
-  store: new MemStore({
-    checkPeriod: 86400000, // prune expired entries every 24h
-  }),
+  store: new FileStore(),
   secret: process.env.SESSION_SECRET || 'your-super-secret-session-key-change-in-production',
   resave: false,
-  saveUninitialized: true, // Changed to true to ensure session is created
+  saveUninitialized: false,
   rolling: true,
-  name: 'connect.sid',
+  name: 'sessionId',
   cookie: {
-    secure: process.env.NODE_ENV === 'production', // True for HTTPS in production
-    httpOnly: true, // Back to true for security
+    secure: false, // Set to false for development, true for HTTPS production
+    httpOnly: true,
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    path: '/' // Explicitly set path
+    sameSite: 'lax',
+    path: '/'
   },
 }));
 
