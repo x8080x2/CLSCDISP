@@ -1,5 +1,6 @@
 import { Shield, Settings, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/auth-context";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -13,6 +14,7 @@ interface AdminHeaderProps {
 }
 
 export default function AdminHeader({ title, description }: AdminHeaderProps) {
+  const { signOut, user } = useAuth();
   return (
     <header className="bg-white shadow-sm border-b">
       <div className="px-6 py-4">
@@ -32,6 +34,7 @@ export default function AdminHeader({ title, description }: AdminHeaderProps) {
             <div className="px-3 py-1 bg-red-100 text-red-800 text-xs font-medium rounded-full">
               Admin Portal
             </div>
+            <span className="text-sm font-medium text-gray-700">{user?.firstName || user?.username}</span>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm">
@@ -43,7 +46,7 @@ export default function AdminHeader({ title, description }: AdminHeaderProps) {
                   <Settings className="w-4 h-4 mr-2" />
                   Settings
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={signOut} data-testid="admin-signout">
                   <LogOut className="w-4 h-4 mr-2" />
                   Logout
                 </DropdownMenuItem>

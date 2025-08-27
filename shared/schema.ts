@@ -10,8 +10,10 @@ export const approvalStatusEnum = pgEnum('approval_status', ['pending', 'approve
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
-  telegramId: text("telegram_id").notNull().unique(),
+  telegramId: text("telegram_id").unique(), // Made optional for web-only users
   username: text("username").notNull(),
+  email: text("email").unique(), // For web login
+  password: text("password"), // Hashed password for web login
   firstName: text("first_name"),
   lastName: text("last_name"),
   balance: decimal("balance", { precision: 10, scale: 2 }).notNull().default("0.00"),
@@ -103,6 +105,23 @@ export const insertUserSchema = createInsertSchema(users).omit({
   isActive: true,
   createdAt: true,
 });
+
+// Auth schemas
+export const signUpSchema = z.object({
+  username: z.string().min(3, "Username must be at least 3 characters"),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+});
+
+export const signInSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(1, "Password is required"),
+});
+
+export type SignUpData = z.infer<typeof signUpSchema>;
+export type SignInData = z.infer<typeof signInSchema>;
 
 export const insertOrderSchema = createInsertSchema(orders).omit({
   id: true,

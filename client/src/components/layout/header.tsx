@@ -1,4 +1,6 @@
-import { Bell, User } from "lucide-react";
+import { Bell, User, LogOut } from "lucide-react";
+import { useAuth } from "@/contexts/auth-context";
+import { Button } from "@/components/ui/button";
 
 interface HeaderProps {
   title: string;
@@ -6,6 +8,7 @@ interface HeaderProps {
 }
 
 export default function Header({ title, description }: HeaderProps) {
+  const { signOut, user } = useAuth();
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
       <div className="flex items-center justify-between">
@@ -22,8 +25,20 @@ export default function Header({ title, description }: HeaderProps) {
               3
             </span>
           </button>
-          <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-            <User className="w-4 h-4 text-white" />
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+              <User className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-sm font-medium text-gray-700">{user?.firstName || user?.username}</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={signOut}
+              className="ml-2"
+              data-testid="button-signout"
+            >
+              <LogOut className="w-4 h-4" />
+            </Button>
           </div>
         </div>
       </div>
