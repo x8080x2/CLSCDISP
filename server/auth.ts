@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import type { Express, Request, Response, NextFunction } from 'express';
 import { storage } from './storage';
 import { signUpSchema, signInSchema, type SignUpData, type SignInData } from '@shared/schema';
+import { sendAdminCode, verifyAdminCode, setAdminSession } from './admin-auth';
 import { z } from 'zod';
 
 // Session user type
@@ -18,6 +19,11 @@ export interface SessionUser {
 declare module 'express-session' {
   interface SessionData {
     user?: SessionUser;
+    adminCode?: {
+      code: string;
+      authorizedAt: number;
+      expiresAt: number;
+    };
   }
 }
 
@@ -154,6 +160,75 @@ export function setupAuth(app: Express) {
       res.clearCookie('connect.sid');
       res.json({ message: 'Signed out successfully' });
     });
+  });
+
+  // Request admin code route
+  app.post('/api/auth/admin/request-code', async (req: Request, res: Response) => {
+    try {
+      const code = await sendAdminCode();
+      res.json({ message: 'Admin code sent to Telegram. Check your messages.' });
+    } catch (error) {
+      console.error('Error sending admin code:', error);
+      res.status(500).json({ message: 'Failed to send admin code. Make sure Telegram bot is configured.' });
+    }
+  });
+
+  // Verify admin code route
+  app.post('/api/auth/admin/verify-code', async (req: Request, res: Response) => {
+    try {
+      const { code } = req.body;
+      
+      if (!code || typeof code !== 'string') {
+        return res.status(400).json({ message: 'Admin code is required' });
+      }
+
+      const isValid = verifyAdminCode(code);
+      if (!isValid) {
+        return res.status(401).json({ message: 'Invalid or expired admin code' });
+      }
+
+      // Set admin session
+      setAdminSession(req, code);
+      
+      // Force session save
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error:', err);
+          return res.status(500).json({ message: 'Failed to save admin session' });
+        }
+        
+        res.json({ 
+          message: 'Admin access granted',
+          expiresAt: req.session.adminCode?.expiresAt
+        });
+      });
+    } catch (error) {
+      console.error('Error verifying admin code:', error);
+      res.status(500).json({ message: 'Failed to verify admin code' });
+    }
+  });
+
+  // Check admin status route
+  app.get('/api/auth/admin/status', async (req: Request, res: Response) => {
+    try {
+      const adminCodeSession = req.session.adminCode;
+      
+      if (!adminCodeSession || Date.now() > adminCodeSession.expiresAt) {
+        return res.status(401).json({ 
+          message: 'Admin access required',
+          isAdminAuthorized: false 
+        });
+      }
+
+      res.json({
+        isAdminAuthorized: true,
+        expiresAt: adminCodeSession.expiresAt,
+        timeRemaining: Math.max(0, adminCodeSession.expiresAt - Date.now())
+      });
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+      res.status(500).json({ message: 'Failed to check admin status' });
+    }
   });
 
   // Get current user route

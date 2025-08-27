@@ -5,6 +5,7 @@ import { cryptoService } from "./crypto-service";
 import { insertOrderSchema, insertTransactionSchema, insertDeliveryAddressSchema } from "@shared/schema";
 import { sendOrderUpdate, sendNewOrderToAdmins, sendOrderFilesToAdmins, sendTransactionToAdmins, sendOrderToAdmins } from "./telegram-bot";
 import { requireAuth, requireAdmin } from "./auth";
+import { requireAdminCode } from "./admin-auth";
 import { z } from "zod";
 import multer from "multer";
 import path from "path";
@@ -77,7 +78,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   let statsCache: { data: any; timestamp: number } = { data: null, timestamp: 0 };
   const CACHE_DURATION = 30000; // 30 seconds
 
-  app.get("/api/stats", requireAdmin, async (req, res) => {
+  app.get("/api/stats", requireAdminCode, async (req, res) => {
     try {
       const now = Date.now();
       
@@ -108,7 +109,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Users endpoints
-  app.get("/api/users", requireAdmin, async (req, res) => {
+  app.get("/api/users", requireAdminCode, async (req, res) => {
     try {
       const users = await storage.getAllUsers();
       res.json(users);
@@ -308,7 +309,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Orders endpoints
-  app.get("/api/orders", requireAdmin, async (req, res) => {
+  app.get("/api/orders", requireAdminCode, async (req, res) => {
     try {
       const { status, approval } = req.query;
       let orders;
@@ -554,7 +555,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Transactions endpoints
-  app.get("/api/transactions", requireAdmin, async (req, res) => {
+  app.get("/api/transactions", requireAdminCode, async (req, res) => {
     try {
       const { userId, approval } = req.query;
       let transactions;
