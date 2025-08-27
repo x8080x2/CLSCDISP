@@ -231,6 +231,84 @@ export function setupAuth(app: Express) {
     }
   });
 
+  // Change email route
+  app.post('/api/auth/change-email', requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { newEmail, password } = req.body;
+      
+      if (!newEmail || !password) {
+        return res.status(400).json({ message: 'New email and current password are required' });
+      }
+
+      // Get current user
+      const currentUser = await storage.getUser(req.session.user!.id);
+      if (!currentUser || !currentUser.password) {
+        return res.status(401).json({ message: 'User not found or no password set' });
+      }
+
+      // Verify current password
+      const passwordValid = await bcrypt.compare(password, currentUser.password);
+      if (!passwordValid) {
+        return res.status(401).json({ message: 'Current password is incorrect' });
+      }
+
+      // Check if new email is already taken
+      const existingUser = await storage.getUserByEmail(newEmail);
+      if (existingUser && existingUser.id !== currentUser.id) {
+        return res.status(400).json({ message: 'Email already in use' });
+      }
+
+      // Update email
+      await storage.updateUserEmail(currentUser.id, newEmail);
+
+      // Update session
+      req.session.user!.email = newEmail;
+
+      res.json({ message: 'Email updated successfully' });
+    } catch (error) {
+      console.error('Change email error:', error);
+      res.status(500).json({ message: 'Failed to change email' });
+    }
+  });
+
+  // Change password route
+  app.post('/api/auth/change-password', requireAuth, async (req: Request, res: Response) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: 'Current password and new password are required' });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: 'New password must be at least 6 characters' });
+      }
+
+      // Get current user
+      const currentUser = await storage.getUser(req.session.user!.id);
+      if (!currentUser || !currentUser.password) {
+        return res.status(401).json({ message: 'User not found or no password set' });
+      }
+
+      // Verify current password
+      const passwordValid = await bcrypt.compare(currentPassword, currentUser.password);
+      if (!passwordValid) {
+        return res.status(401).json({ message: 'Current password is incorrect' });
+      }
+
+      // Hash new password
+      const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+      // Update password
+      await storage.updateUserPassword(currentUser.id, hashedNewPassword);
+
+      res.json({ message: 'Password updated successfully' });
+    } catch (error) {
+      console.error('Change password error:', error);
+      res.status(500).json({ message: 'Failed to change password' });
+    }
+  });
+
   // Get current user route
   app.get('/api/auth/me', async (req: Request, res: Response) => {
     try {

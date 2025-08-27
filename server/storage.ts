@@ -10,6 +10,8 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUserBalance(userId: number, newBalance: string): Promise<User>;
+  updateUserEmail(userId: number, newEmail: string): Promise<void>;
+  updateUserPassword(userId: number, hashedPassword: string): Promise<void>;
   getAllUsers(): Promise<User[]>;
 
   // Orders
@@ -83,6 +85,14 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, userId))
       .returning();
     return user;
+  }
+
+  async updateUserEmail(userId: number, newEmail: string): Promise<void> {
+    await db.update(users).set({ email: newEmail }).where(eq(users.id, userId));
+  }
+
+  async updateUserPassword(userId: number, hashedPassword: string): Promise<void> {
+    await db.update(users).set({ password: hashedPassword }).where(eq(users.id, userId));
   }
 
   async getAllUsers(): Promise<User[]> {
@@ -306,7 +316,7 @@ export class DatabaseStorage implements IStorage {
       .set({ attachedFiles: JSON.stringify(files) })
       .where(eq(deliveryAddresses.id, id))
       .returning();
-    
+
     return {
       ...deliveryAddress,
       attachedFiles: JSON.parse(deliveryAddress.attachedFiles)

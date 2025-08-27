@@ -6,9 +6,13 @@ import { User, CreditCard, Package, TrendingUp, ArrowLeft, Settings, Bell } from
 import { useState } from "react";
 import { Link } from "wouter";
 import TopUpModal from "@/components/modals/top-up-modal";
+import ChangeEmailModal from "@/components/modals/change-email-modal";
+import ChangePasswordModal from "@/components/modals/change-password-modal";
 
 export default function CustomerProfile() {
   const [showTopUpModal, setShowTopUpModal] = useState(false);
+  const [showChangeEmailModal, setShowChangeEmailModal] = useState(false);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
 
   const { data: currentUser, isLoading: userLoading } = useQuery({
     queryKey: ["/api/users/current"],
@@ -57,11 +61,7 @@ export default function CustomerProfile() {
             <div className="flex items-center space-x-2">
               <Button variant="outline" size="sm">
                 <Settings className="w-4 h-4 mr-2" />
-                Settings
-              </Button>
-              <Button variant="outline" size="sm">
-                <Bell className="w-4 h-4 mr-2" />
-                Notifications
+                Account Settings
               </Button>
             </div>
           </div>
@@ -100,6 +100,10 @@ export default function CustomerProfile() {
                     </Badge>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
+                        <span className="text-gray-600">Email:</span>
+                        <span className="font-mono text-gray-900">{currentUser?.email}</span>
+                      </div>
+                      <div className="flex justify-between">
                         <span className="text-gray-600">Telegram ID:</span>
                         <span className="font-mono text-gray-900">{currentUser?.telegramId}</span>
                       </div>
@@ -109,6 +113,24 @@ export default function CustomerProfile() {
                           {new Date(currentUser?.createdAt).toLocaleDateString()}
                         </span>
                       </div>
+                    </div>
+                    <div className="mt-4 space-y-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full"
+                        onClick={() => setShowChangeEmailModal(true)}
+                      >
+                        Change Email
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full"
+                        onClick={() => setShowChangePasswordModal(true)}
+                      >
+                        Change Password
+                      </Button>
                     </div>
                   </div>
                 )}
@@ -247,6 +269,14 @@ export default function CustomerProfile() {
       <TopUpModal 
         isOpen={showTopUpModal} 
         onClose={() => setShowTopUpModal(false)} 
+      />
+      <ChangeEmailModal 
+        isOpen={showChangeEmailModal} 
+        onClose={() => setShowChangeEmailModal(false)} 
+      />
+      <ChangePasswordModal 
+        isOpen={showChangePasswordModal} 
+        onClose={() => setShowChangePasswordModal(false)} 
       />
     </div>
   );
