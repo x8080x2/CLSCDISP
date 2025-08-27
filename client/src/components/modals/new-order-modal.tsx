@@ -268,14 +268,14 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <Package className="w-5 h-5 text-blue-600" />
             <span>Create New Order</span>
           </DialogTitle>
           <DialogDescription>
-            Order placed before 3PM will move same day, varies by Courier 🚚 Service. Monday - Saturday, 24/6. 
+            Orders placed after 3 PM will move next day. 
           </DialogDescription>
         </DialogHeader>
 
@@ -284,12 +284,12 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
             {/* Service Type */}
             <div className="space-y-2">
               <Label htmlFor="serviceType">Service Type *</Label>
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <div className="p-1 bg-blue-50 border border-blue-200 rounded-md">
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-blue-900">Same Day Send Out</span>
-                  <span className="text-sm text-blue-700">$16.50/doc</span>
+                  <span className="text-sm text-blue-700">$16.30</span>
                 </div>
-                <p className="text-xs text-blue-600 mt-1">Available Mon-Sat, 24 hours</p>
+                <p className="text-xs text-blue-600 mt-1">Mon-Sat - 24/7</p>
               </div>
               <input type="hidden" value="same_day" onChange={() => handleInputChange("serviceType", "same_day")} />
             </div>
@@ -304,14 +304,14 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
                 max="20"
                 value={formData.documentCount}
                 onChange={(e) => handleInputChange("documentCount", e.target.value)}
-                placeholder="Minimum 3 documents"
+                placeholder="Minimum 3"
               />
             </div>
           </div>
 
           {/* Label Courier Option */}
-          <div className="space-y-2">
-            <div className="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="space-y-1">
+            <div className="flex items-center space-x-3 p-3 bg-blue-10 rounded-lg border border-blue-200">
               <input
                 type="checkbox"
                 id="labelCourier"
@@ -320,7 +320,7 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
                 className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
               />
               <Label htmlFor="labelCourier" className="text-sm font-medium text-blue-900 cursor-pointer">
-                Courier Service Shipping Label (+$11 per delivery address)
+                Courier Label <b>$13</b> Next Day Delivery
               </Label>
             </div>
             <div className="flex items-center space-x-2 px-3">
@@ -333,7 +333,7 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
 
           {/* Description */}
           <div className="space-y-2">
-            <Label htmlFor="description">Description *</Label>
+            <Label htmlFor="description">Special Request ?</Label>
             <Textarea
               id="description"
               value={formData.description}
@@ -422,13 +422,10 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
           {/* Cost Summary */}
           <div className="bg-gray-50 p-4 rounded-lg space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Documents:</span>
+              <span className="text-sm text-gray-600">Total Send Out:</span>
               <span className="text-sm font-medium">{formData.documentCount || 0}</span>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Delivery Addresses:</span>
-              <span className="text-sm font-medium">{deliveryAddresses.filter(a => a.name.trim() && a.address.trim()).length}</span>
-            </div>
+           
             {formData.labelCourier && (
               <div className="flex items-center justify-between text-blue-700 bg-blue-100 px-2 py-1 rounded">
                 <span className="text-sm font-medium">Label Courier Service:</span>
@@ -460,7 +457,7 @@ export default function NewOrderModal({ open, onOpenChange }: NewOrderModalProps
               disabled={loading || parseFloat(formData.totalCost) > parseFloat(currentUser?.balance || "0")}
               className="bg-blue-600 hover:bg-blue-700"
             >
-              {loading ? "Creating..." : "Create Order"}
+              {loading ? "Creating..." : "Send Order Out Now"}
             </Button>
           </div>
         </form>

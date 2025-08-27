@@ -63,12 +63,12 @@ export default function CustomerDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+              <div className="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center">
                 <Send className="text-white text-lg" />
               </div>
               <div>
-                <h1 className="text-[25px] font-extrabold text-[#326acf]">CLS Dispatch Service</h1>
-                <p className="text-sm text-gray-500">Document Delivery Service</p>
+                <h1 className="text-[25px] font-extrabold text-[red]">CLS 🚀</h1>
+                <p className="text-sm text-black-900">Instant Dispatch Service</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
