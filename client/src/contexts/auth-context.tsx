@@ -31,9 +31,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     queryKey: ['auth', 'me'],
     queryFn: async () => {
       try {
-        return await apiRequest('/auth/me');
+        console.log('Making auth/me request...');
+        const result = await apiRequest('/auth/me');
+        console.log('Auth/me response:', result);
+        return result;
       } catch (error: any) {
-        if (error.status === 401) {
+        console.log('Auth/me error:', error);
+        if (error.message && (error.message.includes('401') || error.message.includes('Not authenticated'))) {
           return null; // Not authenticated
         }
         throw error;
