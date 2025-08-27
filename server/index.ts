@@ -31,7 +31,7 @@ app.use(session({
     checkPeriod: 86400000, // prune expired entries every 24h
   }),
   secret: process.env.SESSION_SECRET || 'your-super-secret-session-key-change-in-production',
-  resave: false,
+  resave: true, // Changed to true to force session saves
   saveUninitialized: true, // Changed to true to ensure session is created
   rolling: true,
   name: 'connect.sid',

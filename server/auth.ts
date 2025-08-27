@@ -66,14 +66,9 @@ export function setupAuth(app: Express) {
         lastName: newUser.lastName || undefined,
         isAdmin: newUser.isAdmin || false,
       };
-      
-      // Force session save
-      await new Promise<void>((resolve, reject) => {
-        req.session.save((err: any) => {
-          if (err) reject(err);
-          else resolve();
-        });
-      });
+
+      console.log('Creating session for user:', newUser.email);
+      console.log('Session user data:', req.session.user);
 
       res.json({
         message: 'Account created successfully',
@@ -125,16 +120,9 @@ export function setupAuth(app: Express) {
         isAdmin: user.isAdmin || false,
       };
 
-      // Force session save
-      await new Promise<void>((resolve, reject) => {
-        req.session.save((err: any) => {
-          if (err) reject(err);
-          else resolve();
-        });
-      });
-
       console.log('Session created successfully for user:', user.email);
       console.log('Session data:', req.session.user);
+      console.log('Session ID on signin:', req.sessionID);
 
       res.json({
         message: 'Signed in successfully',
