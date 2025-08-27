@@ -32,15 +32,16 @@ app.use(session({
   }),
   secret: process.env.SESSION_SECRET || 'your-super-secret-session-key-change-in-production',
   resave: false,
-  saveUninitialized: false,
+  saveUninitialized: true, // Changed to true to ensure session is created
   rolling: true,
   name: 'connect.sid',
   cookie: {
     secure: false, // Set to true if using HTTPS
-    httpOnly: true,
+    httpOnly: false, // Changed to false for debugging - allows JS access
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     sameSite: 'lax',
-    domain: undefined // Allow cookies to work on any domain for development
+    domain: undefined, // Allow cookies to work on any domain for development
+    path: '/' // Explicitly set path
   },
 }));
 

@@ -156,6 +156,7 @@ export function setupAuth(app: Express) {
   // Get current user route
   app.get('/api/auth/me', async (req: Request, res: Response) => {
     try {
+      console.log('Headers:', req.headers.cookie);
       console.log('Session ID:', req.sessionID);
       console.log('Session user:', req.session.user);
       console.log('Session data:', req.session);
