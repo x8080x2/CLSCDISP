@@ -7,10 +7,21 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./auth";
 import { initializeDatabase } from "./init-db";
+import cors from 'cors'; // Import cors
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// CORS configuration
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? process.env.FRONTEND_URL || 'https://your-app.replit.app'
+    : ['http://localhost:5173', 'http://127.0.0.1:5173'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true, // Allow credentials (cookies) to be sent
+}));
 
 // Session configuration
 const PgSession = ConnectPgSimple(session);
@@ -65,10 +76,10 @@ app.use((req, res, next) => {
 (async () => {
   // Initialize database tables
   await initializeDatabase();
-  
+
   // Setup authentication routes
   setupAuth(app);
-  
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -78,7 +89,7 @@ app.use((req, res, next) => {
     if (!res.headersSent) {
       res.status(status).json({ message });
     }
-    
+
     console.error('Error:', err);
   });
 
