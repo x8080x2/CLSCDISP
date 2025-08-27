@@ -157,7 +157,11 @@ export function setupAuth(app: Express) {
         console.error('Signout error:', err);
         return res.status(500).json({ message: 'Failed to sign out' });
       }
-      res.clearCookie('connect.sid');
+      res.clearCookie('connect.sid', {
+        path: '/',
+        httpOnly: true,
+        sameSite: 'lax'
+      });
       res.json({ message: 'Signed out successfully' });
     });
   });

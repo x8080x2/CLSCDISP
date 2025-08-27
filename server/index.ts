@@ -84,7 +84,7 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   rolling: true,
-  name: 'sessionId',
+  name: 'connect.sid',
   cookie: {
     secure: false, // Set to false for development, true for HTTPS production
     httpOnly: true,
