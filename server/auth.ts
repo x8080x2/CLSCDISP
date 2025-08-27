@@ -117,26 +117,19 @@ export function setupAuth(app: Express) {
         isAdmin: user.isAdmin || false,
       };
 
-      // Force session save and send response only after save completes
-      req.session.save((err) => {
-        if (err) {
-          console.error('Session save error:', err);
-          return res.status(500).json({ message: 'Failed to save session' });
+      console.log('Session created successfully for user:', user.email);
+      console.log('Session data:', req.session.user);
+
+      res.json({
+        message: 'Signed in successfully',
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          balance: user.balance,
         }
-
-        console.log('Session saved successfully for user:', user.email);
-
-        res.json({
-          message: 'Signed in successfully',
-          user: {
-            id: user.id,
-            username: user.username,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            balance: user.balance,
-          }
-        });
       });
     } catch (error) {
       console.error('Signin error:', error);
