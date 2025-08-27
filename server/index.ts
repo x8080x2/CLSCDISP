@@ -6,6 +6,7 @@ import { pool } from "./db";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { setupAuth } from "./auth";
+import { initializeDatabase } from "./init-db";
 
 const app = express();
 app.use(express.json());
@@ -60,6 +61,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Initialize database tables
+  await initializeDatabase();
+  
   // Setup authentication routes
   setupAuth(app);
   
