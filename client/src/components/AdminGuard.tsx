@@ -14,15 +14,15 @@ export function AdminGuard({ children }: AdminGuardProps) {
     // Wait for auth to load
     if (isLoading) return;
 
-    // If not authenticated at all, redirect to auth
+    // If not authenticated at all, show error or redirect elsewhere
     if (!isAuthenticated || !user) {
-      setLocation("/auth");
+      // Don't redirect to /auth - admin should not use customer auth
       return;
     }
 
-    // If authenticated but not admin, redirect to auth
+    // If authenticated but not admin, show error or redirect elsewhere
     if (!user.isAdmin) {
-      setLocation("/auth");
+      // Don't redirect to /auth - admin should not use customer auth
       return;
     }
   }, [user, isLoading, isAuthenticated, setLocation]);
