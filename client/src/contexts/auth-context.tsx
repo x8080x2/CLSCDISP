@@ -28,10 +28,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
 
   const { data: user, isLoading, error, refetch } = useQuery({
-    queryKey: ['/api/auth/me'],
+    queryKey: ['auth', 'me'],
     queryFn: async () => {
       try {
-        return await apiRequest('/api/auth/me');
+        return await apiRequest('/auth/me');
       } catch (error: any) {
         if (error.status === 401) {
           return null; // Not authenticated
@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      await apiRequest('/api/auth/signout', 'POST');
+      await apiRequest('/auth/signout', 'POST');
       queryClient.clear();
       window.location.href = '/auth';
     } catch (error) {
@@ -58,7 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signin = async (data: any) => {
     try {
-      const response = await apiRequest('/api/auth/signin', 'POST', data);
+      const response = await apiRequest('/auth/signin', 'POST', data);
       console.log('Signin response:', response);
 
       // After successful signin, fetch user data
@@ -72,7 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signup = async (data: any) => {
     try {
-      const response = await apiRequest('/api/auth/signup', 'POST', data);
+      const response = await apiRequest('/auth/signup', 'POST', data);
       console.log('Signup response:', response);
 
       // After successful signup, fetch user data
