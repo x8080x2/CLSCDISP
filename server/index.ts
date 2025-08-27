@@ -37,9 +37,9 @@ app.use(session({
   name: 'connect.sid',
   cookie: {
     secure: false, // Set to false for development, true for HTTPS production
-    httpOnly: true,
+    httpOnly: false, // Changed to false temporarily for debugging
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    sameSite: 'lax',
+    sameSite: 'lax', // Changed back to lax for same-origin requests
     path: '/'
   },
 }));
