@@ -73,7 +73,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Stats endpoint with caching
-  let statsCache = { data: null, timestamp: 0 };
+  let statsCache: { data: any; timestamp: number } = { data: null, timestamp: 0 };
   const CACHE_DURATION = 30000; // 30 seconds
 
   app.get("/api/stats", async (req, res) => {
@@ -129,7 +129,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           telegramId: "demo_user",
           username: "demo",
           firstName: "Demo User",
-          balance: "0.00",
         });
         res.json(defaultUser);
       }
@@ -261,7 +260,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           telegramId: "admin",
           username: "admin",
           firstName: "Admin",
-          balance: "0.00",
         });
       } else {
         user = users[0];
@@ -508,7 +506,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Send files to admins if there are any
-        if (orderWithDetails.deliveryAddresses && orderWithDetails.deliveryAddresses.length > 0) {
+        if (orderWithDetails && orderWithDetails.deliveryAddresses && orderWithDetails.deliveryAddresses.length > 0) {
           await sendOrderFilesToAdmins(orderWithDetails, orderWithDetails.deliveryAddresses);
         }
       } catch (notifyError) {
