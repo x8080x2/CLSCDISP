@@ -81,7 +81,7 @@ export class DatabaseStorage implements IStorage {
   async updateUserBalance(userId: number, newBalance: string): Promise<User> {
     const [user] = await db
       .update(users)
-      .set({ balance: newBalance })
+      .set({ balance: parseFloat(newBalance) })
       .where(eq(users.id, userId))
       .returning();
     return user;
@@ -269,7 +269,10 @@ export class DatabaseStorage implements IStorage {
     return {
       ...orderResult[0].orders,
       user: orderResult[0].users!,
-      deliveryAddresses: deliveryAddressesResult,
+      deliveryAddresses: deliveryAddressesResult.map(addr => ({
+        ...addr,
+        attachedFiles: addr.attachedFiles ? JSON.parse(addr.attachedFiles) : null
+      })),
     };
   }
 
@@ -319,7 +322,7 @@ export class DatabaseStorage implements IStorage {
 
     return {
       ...deliveryAddress,
-      attachedFiles: JSON.parse(deliveryAddress.attachedFiles)
+      attachedFiles: deliveryAddress.attachedFiles ? JSON.parse(deliveryAddress.attachedFiles) : null
     };
   }
 
