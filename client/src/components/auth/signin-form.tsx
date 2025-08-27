@@ -50,7 +50,7 @@ export function SignInForm({ onSuccess, onSwitchToSignUp }: SignInFormProps) {
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto" data-testid="signin-form">
+    <Card className="w-full max-w-md mx-auto bg-white/95 backdrop-blur-sm border-white/20 shadow-2xl" data-testid="signin-form">
       <CardHeader className="space-y-1">
         <CardTitle className="text-2xl text-center">Sign In</CardTitle>
         <CardDescription className="text-center">
