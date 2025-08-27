@@ -108,16 +108,26 @@ export function setupAuth(app: Express) {
         lastName: user.lastName || undefined,
       };
 
-      res.json({
-        message: 'Signed in successfully',
-        user: {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          balance: user.balance,
+      // Force session save and send response only after save completes
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error:', err);
+          return res.status(500).json({ message: 'Failed to save session' });
         }
+        
+        console.log('Session saved successfully for user:', user.email);
+        
+        res.json({
+          message: 'Signed in successfully',
+          user: {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            balance: user.balance,
+          }
+        });
       });
     } catch (error) {
       console.error('Signin error:', error);
@@ -146,6 +156,10 @@ export function setupAuth(app: Express) {
   // Get current user route
   app.get('/api/auth/me', async (req: Request, res: Response) => {
     try {
+      console.log('Session ID:', req.sessionID);
+      console.log('Session user:', req.session.user);
+      console.log('Session data:', req.session);
+      
       if (!req.session.user) {
         return res.status(401).json({ message: 'Not authenticated' });
       }
