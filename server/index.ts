@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
+import MemoryStore from "memorystore";
 import fs from "fs";
 import path from "path";
 import { registerRoutes } from "./routes";
@@ -16,18 +17,22 @@ app.use(express.urlencoded({ extended: false }));
 // CORS configuration
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? [process.env.FRONTEND_URL, process.env.RENDER_EXTERNAL_URL].filter(Boolean)
+    ? [process.env.FRONTEND_URL, process.env.RENDER_EXTERNAL_URL].filter(Boolean) as string[]
     : ['http://localhost:5000', 'http://127.0.0.1:5000', 'http://localhost:5173', 'http://127.0.0.1:5173'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true, // Allow credentials (cookies) to be sent
 }));
 
-// Session configuration with memory store (for development)
+// Session configuration with MemoryStore for development
+const MemStore = MemoryStore(session);
 app.use(session({
+  store: new MemStore({
+    checkPeriod: 86400000, // prune expired entries every 24h
+  }),
   secret: process.env.SESSION_SECRET || 'your-super-secret-session-key-change-in-production',
   resave: false,
-  saveUninitialized: false,
+  saveUninitialized: true, // Changed to true to ensure session is created
   rolling: true,
   name: 'connect.sid',
   cookie: {
