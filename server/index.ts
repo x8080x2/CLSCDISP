@@ -23,10 +23,12 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   rolling: true,
+  name: 'connect.sid',
   cookie: {
     secure: false, // Set to true if using HTTPS
     httpOnly: true,
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    sameSite: 'lax'
   },
 }));
 
